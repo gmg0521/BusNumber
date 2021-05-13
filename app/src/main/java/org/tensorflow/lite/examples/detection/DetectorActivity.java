@@ -195,6 +195,9 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                 break;
             }
 
+//          TEST
+            TessOCR tessOCR = new TessOCR(getApplicationContext());
+
             final List<Detector.Recognition> mappedRecognitions =
                 new ArrayList<Detector.Recognition>();
 
