@@ -16,6 +16,8 @@
 
 package org.tensorflow.lite.examples.detection;
 
+import android.content.Intent;
+import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.Config;
 import android.graphics.Canvas;
@@ -26,11 +28,27 @@ import android.graphics.Paint.Style;
 import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.media.ImageReader.OnImageAvailableListener;
+import android.net.Uri;
+import android.os.Environment;
 import android.os.SystemClock;
+import android.util.Log;
 import android.util.Size;
 import android.util.TypedValue;
+import android.view.View;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.Toast;
+
+import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.coordinatorlayout.widget.CoordinatorLayout;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import org.tensorflow.lite.examples.detection.customview.OverlayView;
@@ -51,9 +69,9 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
   // Configuration values for the prepackaged SSD model.
   private static final int TF_OD_API_INPUT_SIZE = 300;
-  private static final boolean TF_OD_API_IS_QUANTIZED = true;
-  private static final String TF_OD_API_MODEL_FILE = "detect.tflite";
-  private static final String TF_OD_API_LABELS_FILE = "labelmap.txt";
+  private static final boolean TF_OD_API_IS_QUANTIZED = false;
+  private static final String TF_OD_API_MODEL_FILE = "final_model.tflite";
+  private static final String TF_OD_API_LABELS_FILE = "label.txt";
   private static final DetectorMode MODE = DetectorMode.TF_OD_API;
   // Minimum detection confidence to track a detection.
   private static final float MINIMUM_CONFIDENCE_TF_OD_API = 0.5f;
@@ -195,6 +213,9 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                 break;
             }
 
+//          TEST
+//          TessOCR tessOCR = new TessOCR(getApplicationContext());
+
             final List<Detector.Recognition> mappedRecognitions =
                 new ArrayList<Detector.Recognition>();
 
@@ -207,6 +228,15 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
                 result.setLocation(location);
                 mappedRecognitions.add(result);
+
+                if (result.getTitle().equals("busnumber")){
+                  Toast.makeText(getApplicationContext(),"busnumber",Toast.LENGTH_LONG).show();
+                  try {
+                      cropImage(location);
+                    } catch (IOException e) {
+                    e.printStackTrace();
+                  }
+                }
               }
             }
 
@@ -226,6 +256,26 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                 });
           }
         });
+  }
+
+  private void cropImage(RectF location) throws IOException {
+    CoordinatorLayout container;
+
+    container = (CoordinatorLayout) findViewById(R.id.rootView);
+    container.buildDrawingCache();
+    Bitmap captureview = container.getDrawingCache();
+
+    FileOutputStream fos;
+
+    try {
+      fos = new FileOutputStream(Environment.getExternalStorageDirectory().toString()+"/capture.png");
+      captureview.compress(Bitmap.CompressFormat.PNG, 100, fos);
+    }catch (FileNotFoundException e){
+      e.printStackTrace();
+    }
+
+    Toast.makeText(getApplicationContext(),"Captured!", Toast.LENGTH_LONG).show();
+
   }
 
   @Override
