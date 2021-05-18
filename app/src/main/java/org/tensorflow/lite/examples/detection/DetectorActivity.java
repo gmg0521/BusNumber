@@ -71,7 +71,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
   // Configuration values for the prepackaged SSD model.
   private static final int TF_OD_API_INPUT_SIZE = 300;
   private static final boolean TF_OD_API_IS_QUANTIZED = false;
-  private static final String TF_OD_API_MODEL_FILE = "final_model.tflite";
+  private static final String TF_OD_API_MODEL_FILE = "final_james.tflite";
   private static final String TF_OD_API_LABELS_FILE = "label.txt";
   private static final DetectorMode MODE = DetectorMode.TF_OD_API;
   // Minimum detection confidence to track a detection.
@@ -258,17 +258,14 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
   }
 
   private void cropImage(RectF location) throws IOException {
-    CoordinatorLayout container;
 
-    container = (CoordinatorLayout) findViewById(R.id.rootView);
-    container.buildDrawingCache();
-    Bitmap captureview = container.getDrawingCache();
+    Bitmap busnumberImg = Bitmap.createBitmap(previewWidth, previewHeight, Config.ARGB_8888);
 
     FileOutputStream fos;
 
     try {
       fos = new FileOutputStream(Environment.getExternalStorageDirectory().toString()+"/capture.png");
-      captureview.compress(Bitmap.CompressFormat.PNG, 100, fos);
+      rgbFrameBitmap.compress(Bitmap.CompressFormat.PNG, 100, fos);
     }catch (FileNotFoundException e){
       e.printStackTrace();
     }
