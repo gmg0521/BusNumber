@@ -269,9 +269,6 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
     }catch (FileNotFoundException e){
       e.printStackTrace();
     }
-
-    Toast.makeText(getApplicationContext(),"Captured!", Toast.LENGTH_LONG).show();
-
   }
 
   @Override

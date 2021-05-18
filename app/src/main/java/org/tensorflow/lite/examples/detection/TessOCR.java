@@ -52,7 +52,6 @@ public class TessOCR{
 //        processImage(myBitmap, false);  // 원본 이미지로 진행
 
 //        전처리된 이미지를 OCR롤 읽고 결과 값을 String으로 반환하여 tts로 출력!
-        CameraActivity.ttsSpeak(processImage(preProcessImg(myBitmap), true) + "번 버스가 도착했습니다!");  // 전처리 된 이미지로 진행
     }
 
 
@@ -134,7 +133,6 @@ public class TessOCR{
         tess.setImage(bitmap);
         OCRresult = tess.getUTF8Text();
         String resultText = OCRresult.replaceAll("[^0-9]", "");
-        Toast.makeText(ctx.getApplicationContext(), resultText, Toast.LENGTH_SHORT).show();
         Log.e("test",resultText);
 
         return resultText;

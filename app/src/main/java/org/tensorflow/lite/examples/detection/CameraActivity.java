@@ -128,7 +128,11 @@ public abstract class CameraActivity extends AppCompatActivity
           if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED){
             Log.e("TTS","This Language is not supported");
           } else {
-            ttsSpeak("5400번 버스가 도착했습니다!");
+            // TEST OCR + TTS
+            Bitmap myBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.unnamed5);
+
+            TessOCR tessOCR = new TessOCR(getApplicationContext());
+            ttsSpeak(tessOCR.processImage(tessOCR.preProcessImg(myBitmap), false) + "번 버스가 도착했습니다!");
           }
         } else {
           Log.e("TTS","Initialization Failed");
@@ -149,9 +153,6 @@ public abstract class CameraActivity extends AppCompatActivity
     } else {
       requestPermission();
     }
-
-    // TEST OCR + TTS
-    TessOCR tessOCR = new TessOCR(getApplicationContext());
 
     threadsTextView = findViewById(R.id.threads);
     plusImageView = findViewById(R.id.plus);
