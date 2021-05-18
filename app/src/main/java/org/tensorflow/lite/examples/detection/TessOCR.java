@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -22,14 +23,13 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 public class TessOCR{
-
+    private final Bitmap myBitmap;
     private String dataPath;
     private TessBaseAPI tess;
     private Context ctx;
 
     public TessOCR(Context ctx) {
         // 데이터 경로
-
         this.ctx = ctx;
 
         dataPath = ctx.getFilesDir() + "/tesseract/";
@@ -46,11 +46,13 @@ public class TessOCR{
 
 //       아래는 처리할 이미지 추가
 
-        Bitmap myBitmap = BitmapFactory.decodeResource(ctx.getResources(), R.drawable.unnamed5);
+        myBitmap = BitmapFactory.decodeResource(ctx.getResources(), R.drawable.unnamed5);
 
         //이미지 전처리 및 문자 인식 진행
 //        processImage(myBitmap, false);  // 원본 이미지로 진행
-        processImage(preProcessImg(myBitmap), true);  // 전처리 된 이미지로 진행
+
+//        전처리된 이미지를 OCR롤 읽고 결과 값을 String으로 반환하여 tts로 출력!
+        CameraActivity.ttsSpeak(processImage(preProcessImg(myBitmap), true) + "번 버스가 도착했습니다!");  // 전처리 된 이미지로 진행
     }
 
 
@@ -70,7 +72,7 @@ public class TessOCR{
         }
     }
 
-    private Bitmap preProcessImg(Bitmap myBitmap) {
+    public Bitmap preProcessImg(Bitmap myBitmap) {
         OpenCVLoader.initDebug();
 
         Mat img1 = new Mat();
@@ -123,7 +125,7 @@ public class TessOCR{
     }
 
     // 문자 인식 및 결과 출력
-    public void processImage(Bitmap bitmap, Boolean isPreProcessed){
+    public String processImage(Bitmap bitmap, Boolean isPreProcessed){
 
         Toast.makeText(ctx.getApplicationContext(), "이미지가 복잡할 경우 해석 시 많은 시간이 소요될 수도 있습니다.", Toast.LENGTH_LONG).show();
         String OCRresult;
@@ -135,6 +137,8 @@ public class TessOCR{
         Toast.makeText(ctx.getApplicationContext(), resultText, Toast.LENGTH_SHORT).show();
         Log.e("test",resultText);
 
+        return resultText;
+
 //        텍스트 뷰에 읽은 결과 출력
 //        TextView OCRTextView;
 //        if (!isPreProcessed) {
@@ -145,5 +149,7 @@ public class TessOCR{
 //
 //        OCRTextView.setText(OCRresult);
     }
+
+
 
 }
