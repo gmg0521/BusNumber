@@ -20,6 +20,7 @@ import android.content.Intent;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.Config;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
@@ -213,8 +214,6 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                 break;
             }
 
-//          TEST
-//          TessOCR tessOCR = new TessOCR(getApplicationContext());
 
             final List<Detector.Recognition> mappedRecognitions =
                 new ArrayList<Detector.Recognition>();

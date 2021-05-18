@@ -39,10 +39,13 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Trace;
+
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SwitchCompat;
 import androidx.appcompat.widget.Toolbar;
 
+import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.util.Size;
 import android.view.Surface;
@@ -65,6 +68,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.util.Locale;
 
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
@@ -72,6 +76,8 @@ import org.opencv.core.Mat;
 import org.opencv.imgproc.Imgproc;
 import org.tensorflow.lite.examples.detection.env.ImageUtils;
 import org.tensorflow.lite.examples.detection.env.Logger;
+
+import static android.speech.tts.TextToSpeech.ERROR;
 
 public abstract class CameraActivity extends AppCompatActivity
     implements OnImageAvailableListener,
@@ -106,10 +112,29 @@ public abstract class CameraActivity extends AppCompatActivity
   private SwitchCompat apiSwitchCompat;
   private TextView threadsTextView;
 
+  private static TextToSpeech tts;
+
   @Override
   protected void onCreate(final Bundle savedInstanceState) {
     LOGGER.d("onCreate " + this);
     super.onCreate(null);
+
+    tts = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
+      @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+      @Override
+      public void onInit(int status) {
+        if (status == TextToSpeech.SUCCESS) {
+        int result = tts.setLanguage(Locale.KOREA);
+          if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED){
+            Log.e("TTS","This Language is not supported");
+          } else {
+            ttsSpeak("5400번 버스가 도착했습니다!");
+          }
+        } else {
+          Log.e("TTS","Initialization Failed");
+        }
+      }
+    });
 
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
@@ -124,6 +149,9 @@ public abstract class CameraActivity extends AppCompatActivity
     } else {
       requestPermission();
     }
+
+    // TEST OCR + TTS
+    TessOCR tessOCR = new TessOCR(getApplicationContext());
 
     threadsTextView = findViewById(R.id.threads);
     plusImageView = findViewById(R.id.plus);
@@ -354,6 +382,11 @@ public abstract class CameraActivity extends AppCompatActivity
   public synchronized void onDestroy() {
     LOGGER.d("onDestroy " + this);
     super.onDestroy();
+    if (tts != null){
+      tts.stop();
+      tts.shutdown();
+      tts = null;
+    }
   }
 
   protected synchronized void runInBackground(final Runnable r) {
@@ -555,6 +588,13 @@ public abstract class CameraActivity extends AppCompatActivity
 
   protected void showInference(String inferenceTime) {
     inferenceTimeTextView.setText(inferenceTime);
+  }
+
+  @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+  public static void ttsSpeak(CharSequence text){
+    tts.setPitch(1.0f);
+    tts.setSpeechRate(1.0f);
+    tts.speak(text, TextToSpeech.QUEUE_ADD, null, "id1");
   }
 
   protected abstract void processImage();
