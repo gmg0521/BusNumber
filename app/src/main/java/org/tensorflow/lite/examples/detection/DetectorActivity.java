@@ -259,15 +259,41 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
   private void cropImage(RectF location) throws IOException {
 
-    Bitmap busnumberImg = Bitmap.createBitmap(previewWidth, previewHeight, Config.ARGB_8888);
+//  버스 번호만 Crop
+    Matrix rotateMatrix = new Matrix();
+    rotateMatrix.postRotate(90);
+    Bitmap newBitmap = Bitmap.createBitmap(rgbFrameBitmap,
+            (int) location.left,
+            (int) location.top,
+            (int) location.width(),
+            (int) location.height(),
+            rotateMatrix,
+            MAINTAIN_ASPECT);
 
     FileOutputStream fos;
 
+    File uploadFolder = Environment.getExternalStoragePublicDirectory("/DCIM/Camera/");
+
+    if(!uploadFolder.exists()){
+      uploadFolder.mkdir();
+    }
+
+    String Str_path = Environment.getExternalStorageDirectory().getAbsolutePath()+"/DCIM/Camera/";
+
     try {
-      fos = new FileOutputStream(Environment.getExternalStorageDirectory().toString()+"/capture.png");
-      rgbFrameBitmap.compress(Bitmap.CompressFormat.PNG, 100, fos);
+      fos = new FileOutputStream(Str_path+"/capture.png");
+      newBitmap.compress(Bitmap.CompressFormat.PNG, 100, fos);
     }catch (FileNotFoundException e){
       e.printStackTrace();
+    }
+
+    MediaScanner ms = MediaScanner.newInstance(getApplicationContext());
+
+    try {
+      ms.mediaScanning(Str_path + "/capture.png");
+    } catch (Exception e) {
+      e.printStackTrace();
+      System.out.println("::::ERROR::::" + e);
     }
   }
 
