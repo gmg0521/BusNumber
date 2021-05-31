@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-public class TessOCR{
+public class TessOCR {
     private final Bitmap myBitmap;
     private String dataPath;
     private TessBaseAPI tess;
@@ -126,7 +126,6 @@ public class TessOCR{
     // 문자 인식 및 결과 출력
     public String processImage(Bitmap bitmap, Boolean isPreProcessed){
 
-        Toast.makeText(ctx.getApplicationContext(), "이미지가 복잡할 경우 해석 시 많은 시간이 소요될 수도 있습니다.", Toast.LENGTH_LONG).show();
         String OCRresult;
         tess.setVariable(TessBaseAPI.VAR_CHAR_WHITELIST, "1234567890");
 
@@ -137,15 +136,6 @@ public class TessOCR{
 
         return resultText;
 
-//        텍스트 뷰에 읽은 결과 출력
-//        TextView OCRTextView;
-//        if (!isPreProcessed) {
-//            OCRTextView = (TextView) findViewById(R.id.tv_result);
-//        } else {
-//            OCRTextView = (TextView) findViewById(R.id.tv_result2);
-//        }
-//
-//        OCRTextView.setText(OCRresult);
     }
 
 

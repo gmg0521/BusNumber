@@ -159,6 +159,11 @@
         android:background="@android:color/darker_gray" />
 
     <!-- TODO(b/112541284): Unhide when new NNAPI delegate is used. -->
+    <TextView
+        android:id="@+id/mappedRecognitions"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

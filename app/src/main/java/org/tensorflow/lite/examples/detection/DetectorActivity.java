@@ -16,11 +16,8 @@
 
 package org.tensorflow.lite.examples.detection;
 
-import android.content.Intent;
-import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.Config;
-import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
@@ -29,27 +26,14 @@ import android.graphics.Paint.Style;
 import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.media.ImageReader.OnImageAvailableListener;
-import android.net.Uri;
-import android.os.Environment;
+import android.os.Handler;
+import android.os.Message;
 import android.os.SystemClock;
-import android.util.Log;
 import android.util.Size;
 import android.util.TypedValue;
-import android.view.View;
-import android.widget.FrameLayout;
-import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
 import android.widget.Toast;
 
-import androidx.constraintlayout.widget.ConstraintLayout;
-import androidx.coordinatorlayout.widget.CoordinatorLayout;
-
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import org.tensorflow.lite.examples.detection.customview.OverlayView;
@@ -101,236 +85,257 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
   private BorderedText borderedText;
 
-  @Override
-  public void onPreviewSizeChosen(final Size size, final int rotation) {
-    final float textSizePx =
-        TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_DIP, TEXT_SIZE_DIP, getResources().getDisplayMetrics());
-    borderedText = new BorderedText(textSizePx);
-    borderedText.setTypeface(Typeface.MONOSPACE);
+  private float busLeft = 0.0f;
+  private float busTop = 0.0f;
+  private float busRight = 0.0f;
+  private float busBottom = 0.0f;
 
-    tracker = new MultiBoxTracker(this);
+    @Override
+    public void onPreviewSizeChosen(final Size size, final int rotation) {
+      final float textSizePx =
+              TypedValue.applyDimension(
+                      TypedValue.COMPLEX_UNIT_DIP, TEXT_SIZE_DIP, getResources().getDisplayMetrics());
+      borderedText = new BorderedText(textSizePx);
+      borderedText.setTypeface(Typeface.MONOSPACE);
 
-    int cropSize = TF_OD_API_INPUT_SIZE;
+      tracker = new MultiBoxTracker(this);
 
-    try {
-      detector =
-          TFLiteObjectDetectionAPIModel.create(
-              this,
-              TF_OD_API_MODEL_FILE,
-              TF_OD_API_LABELS_FILE,
-              TF_OD_API_INPUT_SIZE,
-              TF_OD_API_IS_QUANTIZED);
-      cropSize = TF_OD_API_INPUT_SIZE;
-    } catch (final IOException e) {
-      e.printStackTrace();
-      LOGGER.e(e, "Exception initializing Detector!");
-      Toast toast =
-          Toast.makeText(
-              getApplicationContext(), "Detector could not be initialized", Toast.LENGTH_SHORT);
-      toast.show();
-      finish();
-    }
+      int cropSize = TF_OD_API_INPUT_SIZE;
 
-    previewWidth = size.getWidth();
-    previewHeight = size.getHeight();
+      try {
+        detector =
+                TFLiteObjectDetectionAPIModel.create(
+                        this,
+                        TF_OD_API_MODEL_FILE,
+                        TF_OD_API_LABELS_FILE,
+                        TF_OD_API_INPUT_SIZE,
+                        TF_OD_API_IS_QUANTIZED);
+        cropSize = TF_OD_API_INPUT_SIZE;
+      } catch (final IOException e) {
+        e.printStackTrace();
+        LOGGER.e(e, "Exception initializing Detector!");
+        Toast toast =
+                Toast.makeText(
+                        getApplicationContext(), "Detector could not be initialized", Toast.LENGTH_SHORT);
+        toast.show();
+        finish();
+      }
 
-    sensorOrientation = rotation - getScreenOrientation();
-    LOGGER.i("Camera orientation relative to screen canvas: %d", sensorOrientation);
+      previewWidth = size.getWidth();
+      previewHeight = size.getHeight();
 
-    LOGGER.i("Initializing at size %dx%d", previewWidth, previewHeight);
-    rgbFrameBitmap = Bitmap.createBitmap(previewWidth, previewHeight, Config.ARGB_8888);
-    croppedBitmap = Bitmap.createBitmap(cropSize, cropSize, Config.ARGB_8888);
+      sensorOrientation = rotation - getScreenOrientation();
+      LOGGER.i("Camera orientation relative to screen canvas: %d", sensorOrientation);
 
-    frameToCropTransform =
-        ImageUtils.getTransformationMatrix(
-            previewWidth, previewHeight,
-            cropSize, cropSize,
-            sensorOrientation, MAINTAIN_ASPECT);
+      LOGGER.i("Initializing at size %dx%d", previewWidth, previewHeight);
+      rgbFrameBitmap = Bitmap.createBitmap(previewWidth, previewHeight, Config.ARGB_8888);
+      croppedBitmap = Bitmap.createBitmap(cropSize, cropSize, Config.ARGB_8888);
 
-    cropToFrameTransform = new Matrix();
-    frameToCropTransform.invert(cropToFrameTransform);
+      frameToCropTransform =
+              ImageUtils.getTransformationMatrix(
+                      previewWidth, previewHeight,
+                      cropSize, cropSize,
+                      sensorOrientation, MAINTAIN_ASPECT);
 
-    trackingOverlay = (OverlayView) findViewById(R.id.tracking_overlay);
-    trackingOverlay.addCallback(
-        new DrawCallback() {
-          @Override
-          public void drawCallback(final Canvas canvas) {
-            tracker.draw(canvas);
-            if (isDebug()) {
-              tracker.drawDebug(canvas);
-            }
-          }
-        });
+      cropToFrameTransform = new Matrix();
+      frameToCropTransform.invert(cropToFrameTransform);
 
-    tracker.setFrameConfiguration(previewWidth, previewHeight, sensorOrientation);
-  }
-
-  @Override
-  protected void processImage() {
-    ++timestamp;
-    final long currTimestamp = timestamp;
-    trackingOverlay.postInvalidate();
-
-    // No mutex needed as this method is not reentrant.
-    if (computingDetection) {
-      readyForNextImage();
-      return;
-    }
-    computingDetection = true;
-    LOGGER.i("Preparing image " + currTimestamp + " for detection in bg thread.");
-
-    rgbFrameBitmap.setPixels(getRgbBytes(), 0, previewWidth, 0, 0, previewWidth, previewHeight);
-
-    readyForNextImage();
-
-    final Canvas canvas = new Canvas(croppedBitmap);
-    canvas.drawBitmap(rgbFrameBitmap, frameToCropTransform, null);
-    // For examining the actual TF input.
-    if (SAVE_PREVIEW_BITMAP) {
-      ImageUtils.saveBitmap(croppedBitmap);
-    }
-
-    runInBackground(
-        new Runnable() {
-          @Override
-          public void run() {
-            LOGGER.i("Running detection on image " + currTimestamp);
-            final long startTime = SystemClock.uptimeMillis();
-            final List<Detector.Recognition> results = detector.recognizeImage(croppedBitmap);
-            lastProcessingTimeMs = SystemClock.uptimeMillis() - startTime;
-
-            cropCopyBitmap = Bitmap.createBitmap(croppedBitmap);
-            final Canvas canvas = new Canvas(cropCopyBitmap);
-            final Paint paint = new Paint();
-            paint.setColor(Color.RED);
-            paint.setStyle(Style.STROKE);
-            paint.setStrokeWidth(2.0f);
-
-            float minimumConfidence = MINIMUM_CONFIDENCE_TF_OD_API;
-            switch (MODE) {
-              case TF_OD_API:
-                minimumConfidence = MINIMUM_CONFIDENCE_TF_OD_API;
-                break;
-            }
-
-
-            final List<Detector.Recognition> mappedRecognitions =
-                new ArrayList<Detector.Recognition>();
-
-            for (final Detector.Recognition result : results) {
-              final RectF location = result.getLocation();
-              if (location != null && result.getConfidence() >= minimumConfidence) {
-                canvas.drawRect(location, paint);
-
-                cropToFrameTransform.mapRect(location);
-
-                result.setLocation(location);
-                mappedRecognitions.add(result);
-
-                if (result.getTitle().equals("busnumber")){
-                  Toast.makeText(getApplicationContext(),"busnumber",Toast.LENGTH_LONG).show();
-                  try {
-                      cropImage(location);
-                    } catch (IOException e) {
-                    e.printStackTrace();
+      trackingOverlay = (OverlayView) findViewById(R.id.tracking_overlay);
+      trackingOverlay.addCallback(
+              new DrawCallback() {
+                @Override
+                public void drawCallback(final Canvas canvas) {
+                  tracker.draw(canvas);
+                  if (isDebug()) {
+                    tracker.drawDebug(canvas);
                   }
                 }
-              }
-            }
+              });
 
-            tracker.trackResults(mappedRecognitions, currTimestamp);
-            trackingOverlay.postInvalidate();
+      tracker.setFrameConfiguration(previewWidth, previewHeight, sensorOrientation);
+    }
 
-            computingDetection = false;
+    @Override
+    protected void processImage() {
+      ++timestamp;
+      final long currTimestamp = timestamp;
+      trackingOverlay.postInvalidate();
 
-            runOnUiThread(
-                new Runnable() {
-                  @Override
-                  public void run() {
-                    showFrameInfo(previewWidth + "x" + previewHeight);
-                    showCropInfo(cropCopyBitmap.getWidth() + "x" + cropCopyBitmap.getHeight());
-                    showInference(lastProcessingTimeMs + "ms");
+      // No mutex needed as this method is not reentrant.
+      if (computingDetection) {
+        readyForNextImage();
+        return;
+      }
+      computingDetection = true;
+      LOGGER.i("Preparing image " + currTimestamp + " for detection in bg thread.");
+
+      rgbFrameBitmap.setPixels(getRgbBytes(), 0, previewWidth, 0, 0, previewWidth, previewHeight);
+
+      readyForNextImage();
+
+      final Canvas canvas = new Canvas(croppedBitmap);
+      canvas.drawBitmap(rgbFrameBitmap, frameToCropTransform, null);
+      // For examining the actual TF input.
+      if (SAVE_PREVIEW_BITMAP) {
+        ImageUtils.saveBitmap(croppedBitmap);
+      }
+
+      runInBackground(
+              new Runnable() {
+                @Override
+                public void run() {
+                  LOGGER.i("Running detection on image " + currTimestamp);
+                  final long startTime = SystemClock.uptimeMillis();
+                  final List<Detector.Recognition> results = detector.recognizeImage(croppedBitmap);
+                  lastProcessingTimeMs = SystemClock.uptimeMillis() - startTime;
+
+                  cropCopyBitmap = Bitmap.createBitmap(croppedBitmap);
+                  final Canvas canvas = new Canvas(cropCopyBitmap);
+                  final Paint paint = new Paint();
+                  paint.setColor(Color.RED);
+                  paint.setStyle(Style.STROKE);
+                  paint.setStrokeWidth(2.0f);
+
+                  float minimumConfidence = MINIMUM_CONFIDENCE_TF_OD_API;
+                  switch (MODE) {
+                    case TF_OD_API:
+                      minimumConfidence = MINIMUM_CONFIDENCE_TF_OD_API;
+                      break;
                   }
-                });
-          }
-        });
-  }
 
-  private void cropImage(RectF location) throws IOException {
+
+                  final List<Detector.Recognition> mappedRecognitions =
+                          new ArrayList<Detector.Recognition>();
+
+                  for (final Detector.Recognition result : results) {
+                    final RectF location = result.getLocation();
+                    if (location != null && result.getConfidence() >= minimumConfidence) {
+                      canvas.drawRect(location, paint);
+
+                      cropToFrameTransform.mapRect(location);
+
+                      result.setLocation(location);
+                      mappedRecognitions.add(result);
+
+
+
+
+//                버스 인식 데이터 업데이트 - 버스 사진 모아서 버스 잘 읽게 학습. 테스트할 때 버스 없는 물체 많은 사진 넣어보기.
+
+//                버스 바운더리 안에 버스번호 있는지 확인 후 있으면 크롭 - 코드
+
+//                버스 번호 읽어주는 방식 (반복 제거) - 1. 버튼 확인식 2. 반복 제거식? 3. 기타
+
+
+//                디자인
+
+                      if (result.getTitle().equals("bus")) {
+                        busLeft = result.getLocation().left;
+                        busTop = result.getLocation().top;
+                        busRight = result.getLocation().right;
+                        busBottom = result.getLocation().bottom;
+                      }
+
+                      if (isTime && result.getTitle().equals("busnumber")) {
+                        Toast.makeText(getApplicationContext(), "Dectected BusNumber! Try to crop image...", Toast.LENGTH_LONG).show();
+                        try {
+                          cropImage(result.getLocation());
+                        } catch (IOException e) {
+                          e.printStackTrace();
+                        }
+                        setTime();
+                      }
+                    }
+                  }
+
+                  tracker.trackResults(mappedRecognitions, currTimestamp);
+                  trackingOverlay.postInvalidate();
+
+                  computingDetection = false;
+
+                  runOnUiThread(
+                          new Runnable() {
+                            @Override
+                            public void run() {
+                              showFrameInfo(previewWidth + "x" + previewHeight);
+                              showCropInfo(cropCopyBitmap.getWidth() + "x" + cropCopyBitmap.getHeight());
+                              showInference(lastProcessingTimeMs + "ms");
+
+                              if (!mappedRecognitions.isEmpty())
+                                for (Detector.Recognition mappedRecognition : mappedRecognitions) {
+                                  recognitionText.setText(recognitionText.getText() + mappedRecognition.getTitle() + "\n");
+                                }
+                            }
+                          });
+                }
+              });
+    }
+
+    private void cropImage(RectF location) throws IOException {
+
+      float cropX = 0.0f;
+      float cropY = 0.0f;
 
 //  버스 번호만 Crop
-    Matrix rotateMatrix = new Matrix();
-    rotateMatrix.postRotate(90);
-    Bitmap newBitmap = Bitmap.createBitmap(rgbFrameBitmap,
-            (int) location.left,
-            (int) location.top,
-            (int) location.width(),
-            (int) location.height(),
-            rotateMatrix,
-            MAINTAIN_ASPECT);
 
-    FileOutputStream fos;
+      if (location.left > 0) cropX = location.left;
+      if (location.top > 0) cropY = location.top;
 
-    File uploadFolder = Environment.getExternalStoragePublicDirectory("/DCIM/Camera/");
+      if (busLeft <= location.left && busTop <= location.top
+          && busRight >= location.right && busBottom >= location.bottom){
 
-    if(!uploadFolder.exists()){
-      uploadFolder.mkdir();
+        Matrix rotateMatrix = new Matrix();
+        rotateMatrix.postRotate(90);
+
+        Bitmap newBitmap = Bitmap.createBitmap(rgbFrameBitmap,
+                (int) cropX,
+                (int) cropY,
+                (int) location.width(),
+                (int) location.height(),
+                rotateMatrix,
+                MAINTAIN_ASPECT);
+
+        CameraActivity.ttsSpeak(tessOCR.processImage(tessOCR.preProcessImg(newBitmap), true));
+
+        FileUploader fileUploader = new FileUploader(getApplicationContext());
+        fileUploader.UpdateFile(newBitmap, "capture");
+      }
     }
 
-    String Str_path = Environment.getExternalStorageDirectory().getAbsolutePath()+"/DCIM/Camera/";
-
-    try {
-      fos = new FileOutputStream(Str_path+"/capture.png");
-      newBitmap.compress(Bitmap.CompressFormat.PNG, 100, fos);
-    }catch (FileNotFoundException e){
-      e.printStackTrace();
+    @Override
+    protected int getLayoutId() {
+      return R.layout.tfe_od_camera_connection_fragment_tracking;
     }
 
-    MediaScanner ms = MediaScanner.newInstance(getApplicationContext());
+    @Override
+    protected Size getDesiredPreviewFrameSize() {
+      return DESIRED_PREVIEW_SIZE;
+    }
 
-    try {
-      ms.mediaScanning(Str_path + "/capture.png");
-    } catch (Exception e) {
-      e.printStackTrace();
-      System.out.println("::::ERROR::::" + e);
+    // Which detection model to use: by default uses Tensorflow Object Detection API frozen
+    // checkpoints.
+    private enum DetectorMode {
+      TF_OD_API;
+    }
+
+    @Override
+    protected void setUseNNAPI(final boolean isChecked) {
+      runInBackground(
+              () -> {
+                try {
+                  detector.setUseNNAPI(isChecked);
+                } catch (UnsupportedOperationException e) {
+                  LOGGER.e(e, "Failed to set \"Use NNAPI\".");
+                  runOnUiThread(
+                          () -> {
+                            Toast.makeText(this, e.getMessage(), Toast.LENGTH_LONG).show();
+                          });
+                }
+              });
+    }
+
+    @Override
+    protected void setNumThreads(final int numThreads) {
+      runInBackground(() -> detector.setNumThreads(numThreads));
     }
   }
-
-  @Override
-  protected int getLayoutId() {
-    return R.layout.tfe_od_camera_connection_fragment_tracking;
-  }
-
-  @Override
-  protected Size getDesiredPreviewFrameSize() {
-    return DESIRED_PREVIEW_SIZE;
-  }
-
-  // Which detection model to use: by default uses Tensorflow Object Detection API frozen
-  // checkpoints.
-  private enum DetectorMode {
-    TF_OD_API;
-  }
-
-  @Override
-  protected void setUseNNAPI(final boolean isChecked) {
-    runInBackground(
-        () -> {
-          try {
-            detector.setUseNNAPI(isChecked);
-          } catch (UnsupportedOperationException e) {
-            LOGGER.e(e, "Failed to set \"Use NNAPI\".");
-            runOnUiThread(
-                () -> {
-                  Toast.makeText(this, e.getMessage(), Toast.LENGTH_LONG).show();
-                });
-          }
-        });
-  }
-
-  @Override
-  protected void setNumThreads(final int numThreads) {
-    runInBackground(() -> detector.setNumThreads(numThreads));
-  }
-}

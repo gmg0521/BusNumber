@@ -69,6 +69,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.Locale;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
@@ -89,6 +91,9 @@ public abstract class CameraActivity extends AppCompatActivity
   private static final int PERMISSIONS_REQUEST = 1;
 
   private static final String PERMISSION_CAMERA = Manifest.permission.CAMERA;
+  public static boolean isTime;
+  private static TimerTask mTask;
+  private static Timer mTimer;
   protected int previewWidth = 0;
   protected int previewHeight = 0;
   private boolean debug = false;
@@ -112,7 +117,12 @@ public abstract class CameraActivity extends AppCompatActivity
   private SwitchCompat apiSwitchCompat;
   private TextView threadsTextView;
 
+  // Tesseract-Two
+  public TessOCR tessOCR;
+  // Google TTS
   private static TextToSpeech tts;
+
+  public TextView recognitionText;
 
   @Override
   protected void onCreate(final Bundle savedInstanceState) {
@@ -128,10 +138,12 @@ public abstract class CameraActivity extends AppCompatActivity
           if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED){
             Log.e("TTS","This Language is not supported");
           } else {
+            isTime = true;
+
             // TEST OCR + TTS
             Bitmap myBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.unnamed5);
 
-            TessOCR tessOCR = new TessOCR(getApplicationContext());
+            tessOCR = new TessOCR(getApplicationContext());
             ttsSpeak(tessOCR.processImage(tessOCR.preProcessImg(myBitmap), false) + "번 버스가 도착했습니다!");
           }
         } else {
@@ -162,6 +174,8 @@ public abstract class CameraActivity extends AppCompatActivity
     gestureLayout = findViewById(R.id.gesture_layout);
     sheetBehavior = BottomSheetBehavior.from(bottomSheetLayout);
     bottomSheetArrowImageView = findViewById(R.id.bottom_sheet_arrow);
+
+    recognitionText = findViewById(R.id.mappedRecognitions);
 
     ViewTreeObserver vto = gestureLayout.getViewTreeObserver();
     vto.addOnGlobalLayoutListener(
@@ -592,10 +606,27 @@ public abstract class CameraActivity extends AppCompatActivity
   }
 
   @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-  public static void ttsSpeak(CharSequence text){
-    tts.setPitch(1.0f);
-    tts.setSpeechRate(1.0f);
-    tts.speak(text, TextToSpeech.QUEUE_ADD, null, "id1");
+  public static void ttsSpeak(String text){
+    if(isTime) {
+      tts.setPitch(1.0f);
+      tts.setSpeechRate(1.0f);
+      tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "id1");
+    }
+  }
+
+  public static void setTime() {
+    isTime = false;
+    mTask = new TimerTask() {
+      @Override
+      public void run() {
+        if (!isTime){
+          isTime = true;
+          mTimer.cancel();
+        }
+      }
+    };
+    mTimer = new Timer();
+    mTimer.schedule(mTask, 3000);
   }
 
   protected abstract void processImage();
