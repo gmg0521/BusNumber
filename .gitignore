@@ -11,3 +11,6 @@
 
 /.gradle/
 /.idea/
+
+/lib_task_api
+/opencv
