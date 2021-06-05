@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:showIn="navigation_view">
+
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_fontSize"
+            android:icon="@drawable/caret"
+            android:title="폰트 크기 조절하기" />
+
+        <item
+            android:id="@+id/nav_changeBG"
+            android:icon="@drawable/caret"
+            android:title="배경색 변경하기" />
+    </group>
+</menu>
