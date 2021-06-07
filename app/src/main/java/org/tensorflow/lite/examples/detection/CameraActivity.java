@@ -39,11 +39,14 @@ import android.os.Trace;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.util.Size;
+import android.view.MenuItem;
 import android.view.Surface;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.CompoundButton;
+import android.widget.ListView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -53,6 +56,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
+
+import com.google.android.material.navigation.NavigationView;
 
 import org.tensorflow.lite.examples.detection.env.ImageUtils;
 import org.tensorflow.lite.examples.detection.env.Logger;
@@ -137,13 +142,32 @@ public abstract class CameraActivity extends AppCompatActivity
     actionBar.setDisplayShowCustomEnabled(true);
 
     //툴바의 열기버튼
+    DrawerLayout drawer = findViewById(R.id.drawer);
     Button buttonOpen = findViewById(R.id.open);
     buttonOpen.setOnClickListener(v -> {
-      DrawerLayout drawer = findViewById(R.id.drawer);
       if (!drawer.isDrawerOpen(GravityCompat.START)) {
         drawer.openDrawer(GravityCompat.START) ;
       }
       else drawer.closeDrawer(GravityCompat.START);
+    });
+
+    NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
+    navigationView.setNavigationItemSelectedListener(item -> {
+      item.setChecked(true);
+      drawer.closeDrawers();
+
+      int id = item.getItemId();
+      String title = item.getTitle().toString();
+
+      // TODO: 2021-06-07 - 폰트사이즈 변경 및 배경색 변경
+      if (id == R.id.nav_fontSize){
+        Toast.makeText(getApplicationContext(),"폰트 사이즈 변경", Toast.LENGTH_LONG).show();
+      }
+      else if (id == R.id.nav_changeBG){
+        Toast.makeText(getApplicationContext(),"배경색 변경", Toast.LENGTH_LONG).show();
+      }
+
+      return true;
     });
 
     if (hasPermission()) {

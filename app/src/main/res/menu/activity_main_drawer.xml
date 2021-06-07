@@ -6,12 +6,12 @@
     <group android:checkableBehavior="single">
         <item
             android:id="@+id/nav_fontSize"
-            android:icon="@drawable/caret"
+            android:icon="@android:drawable/ic_menu_edit"
             android:title="폰트 크기 조절하기" />
 
         <item
             android:id="@+id/nav_changeBG"
-            android:icon="@drawable/caret"
+            android:icon="@android:drawable/ic_menu_gallery"
             android:title="배경색 변경하기" />
     </group>
 </menu>

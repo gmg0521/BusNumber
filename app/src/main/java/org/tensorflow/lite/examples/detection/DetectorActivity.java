@@ -50,7 +50,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
   private static final Logger LOGGER = new Logger();
 
   // Configuration values for the prepackaged SSD model.
-  private static final int TF_OD_API_INPUT_SIZE = 600;
+  private static final int TF_OD_API_INPUT_SIZE = 640;
   private static final boolean TF_OD_API_IS_QUANTIZED = false;
   private static final String TF_OD_API_MODEL_FILE = "final_james.tflite";
   private static final String TF_OD_API_LABELS_FILE = "label.txt";
@@ -230,8 +230,8 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
 //  버스 번호만 Crop
 
-      if (location.left > 20) cropX = location.left -20;
-      if (location.top > 20) cropY = location.top -20;
+      if (location.left > 20) cropX = location.left - 20;
+      if (location.top > 20) cropY = location.top - 20;
 
       if (busLeft <= location.left && busTop <= location.top
           && busRight >= location.right && busBottom >= location.bottom){
