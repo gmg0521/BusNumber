@@ -31,6 +31,7 @@ import android.os.Message;
 import android.os.SystemClock;
 import android.util.Size;
 import android.util.TypedValue;
+import android.view.View;
 import android.widget.Toast;
 
 import java.io.IOException;
@@ -316,26 +317,5 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
     // checkpoints.
     private enum DetectorMode {
       TF_OD_API;
-    }
-
-    @Override
-    protected void setUseNNAPI(final boolean isChecked) {
-      runInBackground(
-              () -> {
-                try {
-                  detector.setUseNNAPI(isChecked);
-                } catch (UnsupportedOperationException e) {
-                  LOGGER.e(e, "Failed to set \"Use NNAPI\".");
-                  runOnUiThread(
-                          () -> {
-                            Toast.makeText(this, e.getMessage(), Toast.LENGTH_LONG).show();
-                          });
-                }
-              });
-    }
-
-    @Override
-    protected void setNumThreads(final int numThreads) {
-      runInBackground(() -> detector.setNumThreads(numThreads));
     }
   }
