@@ -20,11 +20,8 @@ import android.Manifest;
 import android.app.Fragment;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Rect;
-import android.graphics.YuvImage;
 import android.hardware.Camera;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
@@ -39,52 +36,32 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Trace;
-
-import androidx.annotation.RequiresApi;
-import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.SwitchCompat;
-import androidx.appcompat.widget.Toolbar;
-
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.util.Size;
-import android.view.Gravity;
 import android.view.Surface;
 import android.view.View;
-import android.view.ViewTreeObserver;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.CompoundButton;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 
-import com.google.android.material.bottomsheet.BottomSheetBehavior;
-import com.googlecode.tesseract.android.TessBaseAPI;
+import org.tensorflow.lite.examples.detection.env.ImageUtils;
+import org.tensorflow.lite.examples.detection.env.Logger;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.FileNotFoundException;
 import java.nio.ByteBuffer;
 import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
-
-import org.opencv.android.OpenCVLoader;
-import org.opencv.android.Utils;
-import org.opencv.core.Mat;
-import org.opencv.imgproc.Imgproc;
-import org.tensorflow.lite.examples.detection.env.ImageUtils;
-import org.tensorflow.lite.examples.detection.env.Logger;
-
-import static android.speech.tts.TextToSpeech.ERROR;
 
 public abstract class CameraActivity extends AppCompatActivity
     implements OnImageAvailableListener,
@@ -101,12 +78,12 @@ public abstract class CameraActivity extends AppCompatActivity
   private static Timer mTimer;
   protected int previewWidth = 0;
   protected int previewHeight = 0;
-  private boolean debug = false;
+  private final boolean debug = false;
   private Handler handler;
   private HandlerThread handlerThread;
   private boolean useCamera2API;
   private boolean isProcessingFrame = false;
-  private byte[][] yuvBytes = new byte[3][];
+  private final byte[][] yuvBytes = new byte[3][];
   private int[] rgbBytes = null;
   private int yRowStride;
   private Runnable postInferenceCallback;
@@ -116,34 +93,38 @@ public abstract class CameraActivity extends AppCompatActivity
   public TessOCR tessOCR;
   // Google TTS
   private static TextToSpeech tts;
+  // 파일업로더
+  public static FileUploader fileUpLoader;
 
-//  public TextView recognitionText;
 
   @Override
   protected void onCreate(final Bundle savedInstanceState) {
     LOGGER.d("onCreate " + this);
     super.onCreate(null);
     setContentView(R.layout.tfe_od_activity_camera);
-    tts = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
-      @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-      @Override
-      public void onInit(int status) {
-        if (status == TextToSpeech.SUCCESS) {
-        int result = tts.setLanguage(Locale.KOREA);
-          if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED){
-            Log.e("TTS","This Language is not supported");
-          } else {
-            isTime = true;
 
-            // TEST OCR + TTS
-            Bitmap myBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.unnamed5);
+    try {
+      fileUpLoader = new FileUploader(getApplicationContext());
+    } catch (FileNotFoundException e) {
+      e.printStackTrace();
+    }
 
-            tessOCR = new TessOCR(getApplicationContext());
-            ttsSpeak(tessOCR.processImage(tessOCR.preProcessImg(myBitmap), false) + "번 버스가 도착했습니다!");
-          }
+    tts = new TextToSpeech(this, status -> {
+      if (status == TextToSpeech.SUCCESS) {
+      int result = tts.setLanguage(Locale.KOREA);
+        if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED){
+          Log.e("TTS","This Language is not supported");
         } else {
-          Log.e("TTS","Initialization Failed");
+          isTime = true;
+
+          // TEST OCR + TTS
+          Bitmap myBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.unnamed5);
+
+          tessOCR = new TessOCR(getApplicationContext());
+          ttsSpeak(tessOCR.processImage(tessOCR.preProcessImg(myBitmap)));
         }
+      } else {
+        Log.e("TTS","Initialization Failed");
       }
     });
 
@@ -156,16 +137,13 @@ public abstract class CameraActivity extends AppCompatActivity
     actionBar.setDisplayShowCustomEnabled(true);
 
     //툴바의 열기버튼
-    Button buttonOpen = (Button) findViewById(R.id.open) ;
-    buttonOpen.setOnClickListener(new Button.OnClickListener() {
-      @Override
-      public void onClick(View v) {
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer) ;
-        if (!drawer.isDrawerOpen(Gravity.LEFT)) {
-          drawer.openDrawer(Gravity.LEFT) ;
-        }
-        else drawer.closeDrawer(Gravity.LEFT);
+    Button buttonOpen = findViewById(R.id.open);
+    buttonOpen.setOnClickListener(v -> {
+      DrawerLayout drawer = findViewById(R.id.drawer);
+      if (!drawer.isDrawerOpen(GravityCompat.START)) {
+        drawer.openDrawer(GravityCompat.START) ;
       }
+      else drawer.closeDrawer(GravityCompat.START);
     });
 
     if (hasPermission()) {
@@ -215,21 +193,13 @@ public abstract class CameraActivity extends AppCompatActivity
     yRowStride = previewWidth;
 
     imageConverter =
-        new Runnable() {
-          @Override
-          public void run() {
-            ImageUtils.convertYUV420SPToARGB8888(bytes, previewWidth, previewHeight, rgbBytes);
-          }
-        };
+            () -> ImageUtils.convertYUV420SPToARGB8888(bytes, previewWidth, previewHeight, rgbBytes);
 
     postInferenceCallback =
-        new Runnable() {
-          @Override
-          public void run() {
-            camera.addCallbackBuffer(bytes);
-            isProcessingFrame = false;
-          }
-        };
+            () -> {
+              camera.addCallbackBuffer(bytes);
+              isProcessingFrame = false;
+            };
     processImage();
   }
 
@@ -263,10 +233,7 @@ public abstract class CameraActivity extends AppCompatActivity
       final int uvPixelStride = planes[1].getPixelStride();
 
       imageConverter =
-          new Runnable() {
-            @Override
-            public void run() {
-              ImageUtils.convertYUV420ToARGB8888(
+              () -> ImageUtils.convertYUV420ToARGB8888(
                   yuvBytes[0],
                   yuvBytes[1],
                   yuvBytes[2],
@@ -276,17 +243,12 @@ public abstract class CameraActivity extends AppCompatActivity
                   uvRowStride,
                   uvPixelStride,
                   rgbBytes);
-            }
-          };
 
       postInferenceCallback =
-          new Runnable() {
-            @Override
-            public void run() {
-              image.close();
-              isProcessingFrame = false;
-            }
-          };
+              () -> {
+                image.close();
+                isProcessingFrame = false;
+              };
 
       processImage();
     } catch (final Exception e) {
@@ -356,7 +318,7 @@ public abstract class CameraActivity extends AppCompatActivity
 
   @Override
   public void onRequestPermissionsResult(
-      final int requestCode, final String[] permissions, final int[] grantResults) {
+          final int requestCode, @NonNull final String[] permissions, @NonNull final int[] grantResults) {
     super.onRequestPermissionsResult(requestCode, permissions, grantResults);
     if (requestCode == PERMISSIONS_REQUEST) {
       if (allPermissionsGranted(grantResults)) {
@@ -451,14 +413,11 @@ public abstract class CameraActivity extends AppCompatActivity
     if (useCamera2API) {
       CameraConnectionFragment camera2Fragment =
           CameraConnectionFragment.newInstance(
-              new CameraConnectionFragment.ConnectionCallback() {
-                @Override
-                public void onPreviewSizeChosen(final Size size, final int rotation) {
-                  previewHeight = size.getHeight();
-                  previewWidth = size.getWidth();
-                  CameraActivity.this.onPreviewSizeChosen(size, rotation);
-                }
-              },
+                  (size, rotation) -> {
+                    previewHeight = size.getHeight();
+                    previewWidth = size.getWidth();
+                    CameraActivity.this.onPreviewSizeChosen(size, rotation);
+                  },
               this,
               getLayoutId(),
               getDesiredPreviewFrameSize());
@@ -514,18 +473,6 @@ public abstract class CameraActivity extends AppCompatActivity
 //    setUseNNAPI(isChecked);
 //    if (isChecked) apiSwitchCompat.setText("NNAPI");
 //    else apiSwitchCompat.setText("TFLITE");
-  }
-
-  protected void showFrameInfo(String frameInfo) {
-//    frameValueTextView.setText(frameInfo);
-  }
-
-  protected void showCropInfo(String cropInfo) {
-//    cropValueTextView.setText(cropInfo);
-  }
-
-  protected void showInference(String inferenceTime) {
-//    inferenceTimeTextView.setText(inferenceTime);
   }
 
   @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)

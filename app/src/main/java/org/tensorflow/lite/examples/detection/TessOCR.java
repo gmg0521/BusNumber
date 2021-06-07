@@ -1,11 +1,8 @@
 package org.tensorflow.lite.examples.detection;
 
-import android.app.Application;
 import android.content.Context;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -14,6 +11,10 @@ import com.googlecode.tesseract.android.TessBaseAPI;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfPoint;
+import org.opencv.core.Rect;
+import org.opencv.core.Scalar;
+import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
 import java.io.File;
@@ -21,12 +22,14 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 public class TessOCR {
-    private final Bitmap myBitmap;
-    private String dataPath;
-    private TessBaseAPI tess;
-    private Context ctx;
+    private final String dataPath;
+    private final TessBaseAPI tess;
+    private final Context ctx;
+    Bitmap imgBase;
 
     public TessOCR(Context ctx) {
         // 데이터 경로
@@ -43,15 +46,6 @@ public class TessOCR {
         String lang = "eng+kor";
         tess = new TessBaseAPI();
         tess.init(dataPath, lang);
-
-//       아래는 처리할 이미지 추가
-
-        myBitmap = BitmapFactory.decodeResource(ctx.getResources(), R.drawable.unnamed5);
-
-        //이미지 전처리 및 문자 인식 진행
-//        processImage(myBitmap, false);  // 원본 이미지로 진행
-
-//        전처리된 이미지를 OCR롤 읽고 결과 값을 String으로 반환하여 tts로 출력!
     }
 
 
@@ -72,6 +66,8 @@ public class TessOCR {
     }
 
     public Bitmap preProcessImg(Bitmap myBitmap) {
+        Bitmap imgRoi, contoursRoi;
+
         OpenCVLoader.initDebug();
 
         Mat img1 = new Mat();
@@ -83,16 +79,52 @@ public class TessOCR {
 
         Imgproc.cvtColor(img1, imageGray1, Imgproc.COLOR_BGR2GRAY);
         Imgproc.GaussianBlur(imageGray1, imgGaussianBlur, new org.opencv.core.Size(3,3), 0);
-        Imgproc.adaptiveThreshold(imgGaussianBlur, imageCny1, 255, Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY, 99, 4);
+        Imgproc.Canny(imgGaussianBlur, imageCny1, 10, 100,3,true);
+        Imgproc.threshold(imgGaussianBlur, imageCny1, 150, 255, Imgproc.THRESH_BINARY);
 
-        Bitmap resultImg = Bitmap.createBitmap(imageCny1.cols(), imageCny1.rows(), Bitmap.Config.ARGB_8888);
-        Utils.matToBitmap(imageCny1, resultImg);
+        List<MatOfPoint> contours = new ArrayList<>();
+        Mat hierarchy = new Mat();
 
-//        전처리된 이미지 표시
-//        ImageView imageView = (ImageView) findViewById(R.id.imageView2);
-//        imageView.setImageBitmap(resultImg);
+        //노이즈 제거
+        Imgproc.erode(imageCny1, imageCny1, Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(6, 6)));
+        Imgproc.dilate(imageCny1, imageCny1, Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(12, 12)));
 
-        return resultImg;
+        //관심영역 추출
+        Imgproc.findContours(imageCny1, contours, hierarchy, Imgproc.RETR_TREE, Imgproc.CHAIN_APPROX_SIMPLE);
+        Imgproc.drawContours(img1, contours, -1, new Scalar(0,255,0,0), 5);
+
+        imgBase = Bitmap.createBitmap(img1.cols(), img1.rows(), Bitmap.Config.ARGB_8888);
+        Utils.matToBitmap(img1, imgBase);
+
+//      Without Contours
+        imgRoi = Bitmap.createBitmap(imageCny1.cols(), imageCny1.rows(), Bitmap.Config.ARGB_8888);
+        contoursRoi = Bitmap.createBitmap(imageCny1.cols(), imageCny1.rows(), Bitmap.Config.ARGB_8888);
+        Utils.matToBitmap(imageCny1, imgRoi);
+
+        for (int idx = 0; idx >= 0; idx = (int) hierarchy.get(0, idx)[0]) {
+            MatOfPoint matOfPoint = contours.get(idx);
+            Rect rect = Imgproc.boundingRect(matOfPoint);
+
+//            상자 크기에 따라 결정
+//            if (rect.width < 30 || rect.height < 30
+//                    || rect.width <= rect.height
+//                    || rect.width <= rect.height * 3 || rect.width >= rect.height * 6)
+//                continue;
+            Imgproc.rectangle(imageCny1, rect, new Scalar(255,0,0,0),2); // 일단은 전부 그림
+        }
+        Utils.matToBitmap(imageCny1, contoursRoi);
+
+        try {
+            Toast.makeText(ctx.getApplicationContext(), "전처리 된 이미지를 저장합니다!", Toast.LENGTH_LONG).show();
+            CameraActivity.fileUpLoader.UpdateFile(imgBase, "컨투어 전처리");
+            CameraActivity.fileUpLoader.UpdateFile(imgRoi, "반환된 전처리");
+            CameraActivity.fileUpLoader.UpdateFile(contoursRoi, "바운더리 포함 전처리");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+//      반환값은 바운더리 없이!
+        return imgRoi;
     }
 
     // 파일 복제
@@ -124,7 +156,7 @@ public class TessOCR {
     }
 
     // 문자 인식 및 결과 출력
-    public String processImage(Bitmap bitmap, Boolean isPreProcessed){
+    public String processImage(Bitmap bitmap){
 
         String OCRresult;
         tess.setVariable(TessBaseAPI.VAR_CHAR_WHITELIST, "1234567890");
@@ -134,7 +166,7 @@ public class TessOCR {
         String resultText = OCRresult.replaceAll("[^0-9]", "");
         Log.e("test",resultText);
 
-        return resultText;
+        return resultText + "번 버스가 도착했습니다!";
 
     }
 
