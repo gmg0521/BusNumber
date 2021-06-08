@@ -17,8 +17,11 @@
 package org.tensorflow.lite.examples.detection;
 
 import android.Manifest;
+import android.app.Activity;
 import android.app.Fragment;
 import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
@@ -42,6 +45,7 @@ import android.os.Trace;
 
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SwitchCompat;
 import androidx.appcompat.widget.Toolbar;
@@ -50,6 +54,7 @@ import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.util.Size;
 import android.view.Gravity;
+import android.view.MenuItem;
 import android.view.Surface;
 import android.view.View;
 import android.view.ViewTreeObserver;
@@ -58,12 +63,15 @@ import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
+import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
+import com.google.android.material.navigation.NavigationView;
 import com.googlecode.tesseract.android.TessBaseAPI;
 
 import java.io.ByteArrayOutputStream;
@@ -89,7 +97,7 @@ import static android.speech.tts.TextToSpeech.ERROR;
 public abstract class CameraActivity extends AppCompatActivity
     implements OnImageAvailableListener,
         Camera.PreviewCallback,
-        CompoundButton.OnCheckedChangeListener,
+        CompoundButton.OnCheckedChangeListener, NavigationView.OnNavigationItemSelectedListener,
         View.OnClickListener {
   private static final Logger LOGGER = new Logger();
 
@@ -117,13 +125,28 @@ public abstract class CameraActivity extends AppCompatActivity
   // Google TTS
   private static TextToSpeech tts;
 
+  private ActionBarDrawerToggle mActionBarDrawerToggle;
+  private DrawerLayout mDrawerLayout;
 //  public TextView recognitionText;
+  MenuItem menuItem;
+  NavigationView mNavigationView;
+
+  public static Boolean isDarkT;
+  private SharedPreferences sp;
 
   @Override
   protected void onCreate(final Bundle savedInstanceState) {
+    sp = getSharedPreferences("sp", Activity.MODE_PRIVATE);
+    isDarkT = sp.getBoolean("isDark", true);
+    LOGGER.e("깜깜쓰 ? "+isDarkT);
+    setTheme (isDarkT? R.style.AppTheme_BBeono : R.style.AppTheme_WBeono);
+
     LOGGER.d("onCreate " + this);
     super.onCreate(null);
     setContentView(R.layout.tfe_od_activity_camera);
+    mNavigationView = (NavigationView) findViewById(R.id.nav_view);
+    mNavigationView.setNavigationItemSelectedListener(this);
+
     tts = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
       @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
       @Override
@@ -148,25 +171,14 @@ public abstract class CameraActivity extends AppCompatActivity
     });
 
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+    mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer) ;
 
     //툴바
     Toolbar toolbar = findViewById(R.id.toolbar);
     setSupportActionBar(toolbar);
     ActionBar actionBar = getSupportActionBar();
-    actionBar.setDisplayShowCustomEnabled(true);
-
-    //툴바의 열기버튼
-    Button buttonOpen = (Button) findViewById(R.id.open) ;
-    buttonOpen.setOnClickListener(new Button.OnClickListener() {
-      @Override
-      public void onClick(View v) {
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer) ;
-        if (!drawer.isDrawerOpen(Gravity.LEFT)) {
-          drawer.openDrawer(Gravity.LEFT) ;
-        }
-        else drawer.closeDrawer(Gravity.LEFT);
-      }
-    });
+    actionBar.setDisplayHomeAsUpEnabled(true);
+    actionBar.setHomeAsUpIndicator(R.drawable.caret);
 
     if (hasPermission()) {
       setFragment();
@@ -296,6 +308,42 @@ public abstract class CameraActivity extends AppCompatActivity
     }
     Trace.endSection();
   }
+  //홈버튼 햄버거
+  @Override
+  public boolean onOptionsItemSelected(MenuItem item) {
+    int id = item.getItemId();
+    mDrawerLayout = findViewById(R.id.drawer);
+
+    if (id == android.R.id.home) {
+      if (!mDrawerLayout.isDrawerOpen(Gravity.LEFT)) {
+        mDrawerLayout.openDrawer(Gravity.LEFT);
+      } else mDrawerLayout.closeDrawer(Gravity.LEFT);
+    }
+    return super.onOptionsItemSelected(item);
+  }
+
+  //서랍 메뉴 선택할 때 메소드
+  @Override
+  public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
+    int selectedItemId = menuItem.getItemId();
+    LOGGER.e("훔...???");
+    if (selectedItemId == R.id.nav_fontSize) {
+      Intent intent = new Intent(CameraActivity.this, settings_fontSize.class);
+      Toast.makeText(this, "폰트 사이즈~", Toast.LENGTH_SHORT).show();
+      startActivity(intent);
+    } else if (selectedItemId == R.id.nav_changeBG) {
+      Intent intent2 = new Intent(CameraActivity.this, settings_changeBG.class);
+      Toast.makeText(this, "배경색 바꾸기~", Toast.LENGTH_SHORT).show();
+      startActivity(intent2);
+    }
+//    else if (selectedItemId == android.R.id.home) {
+//      finish();
+//    }
+      //드로어 닫기
+      mDrawerLayout = findViewById(R.id.drawer);
+      mDrawerLayout.closeDrawer(GravityCompat.START);
+      return true;
+  }
 
   @Override
   public synchronized void onStart() {
@@ -330,9 +378,14 @@ public abstract class CameraActivity extends AppCompatActivity
 
     super.onPause();
   }
-
+  
   @Override
   public synchronized void onStop() {
+
+      SharedPreferences.Editor editor = sp.edit();
+      editor.putBoolean("isDark", isDarkT); // key, value를 이용하여 저장하는 형태
+      editor.commit();
+
     LOGGER.d("onStop " + this);
     super.onStop();
   }

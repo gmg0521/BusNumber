@@ -4,32 +4,23 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="140dp"
-    android:background="@color/design_default_color_secondary"
+    android:background="?attr/colorPrimary"
     android:gravity="bottom"
     android:orientation="vertical"
-    android:padding="16dp"
-    android:theme="@style/ThemeOverlay.AppCompat.Dark">
+    android:padding="16dp">
 
     <ImageView
         android:id="@+id/loginImage"
-        android:layout_width="50dp"
-        android:layout_height="50dp"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
         android:contentDescription="Navigation Header"
-        android:paddingTop="8dp"
-        android:src="@mipmap/ic_launcher_round" />
-
-<!--    <TextView-->
-<!--        android:id="@+id/loginID"-->
-<!--        android:layout_width="match_parent"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:paddingTop="8dp"-->
-<!--        android:text="냠냠 "-->
-<!--        android:textAppearance="@style/TextAppearance.AppCompat.Body1" />-->
-
-<!--    <TextView-->
-<!--        android:id="@+id/loginStr"-->
-<!--        android:layout_width="wrap_content"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:text="고구마호박 " />-->
-
+        android:layout_margin="10dp"
+        android:src="@mipmap/ic_launcher_round"
+        android:layout_gravity="center"/>
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Beono"
+        android:layout_gravity="center"
+        android:textColor="?attr/titleTextColor"/>
 </LinearLayout>
