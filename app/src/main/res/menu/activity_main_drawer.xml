@@ -7,6 +7,7 @@
     <group android:checkableBehavior="none">
         <item
             android:id="@+id/nav_fontSize"
+
             android:icon="@mipmap/ic_launcher"
             android:title="폰트 크기 조절하기"
             app:titleTextColor="?attr/titleTextColor"/>
@@ -16,5 +17,6 @@
             android:icon="@mipmap/ic_launcher"
             android:title="배경색 변경하기"
             app:titleTextColor="?attr/titleTextColor"/>
+
     </group>
 </menu>

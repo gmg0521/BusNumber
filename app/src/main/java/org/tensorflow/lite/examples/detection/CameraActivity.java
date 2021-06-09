@@ -23,11 +23,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Rect;
-import android.graphics.YuvImage;
 import android.hardware.Camera;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
@@ -54,19 +51,24 @@ import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.util.Size;
 import android.view.Gravity;
+
 import android.view.MenuItem;
 import android.view.Surface;
 import android.view.View;
-import android.view.ViewTreeObserver;
 import android.view.WindowManager;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.CompoundButton;
+
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
+
 import android.widget.Toast;
+
 import androidx.annotation.NonNull;
+
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 
@@ -74,25 +76,19 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.navigation.NavigationView;
 import com.googlecode.tesseract.android.TessBaseAPI;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+
+import org.tensorflow.lite.examples.detection.env.ImageUtils;
+import org.tensorflow.lite.examples.detection.env.Logger;
+
+import java.io.FileNotFoundException;
 import java.nio.ByteBuffer;
 import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
-
-import org.opencv.android.OpenCVLoader;
-import org.opencv.android.Utils;
-import org.opencv.core.Mat;
-import org.opencv.imgproc.Imgproc;
-import org.tensorflow.lite.examples.detection.env.ImageUtils;
-import org.tensorflow.lite.examples.detection.env.Logger;
-
-import static android.speech.tts.TextToSpeech.ERROR;
 
 public abstract class CameraActivity extends AppCompatActivity
     implements OnImageAvailableListener,
@@ -109,12 +105,12 @@ public abstract class CameraActivity extends AppCompatActivity
   private static Timer mTimer;
   protected int previewWidth = 0;
   protected int previewHeight = 0;
-  private boolean debug = false;
+  private final boolean debug = false;
   private Handler handler;
   private HandlerThread handlerThread;
   private boolean useCamera2API;
   private boolean isProcessingFrame = false;
-  private byte[][] yuvBytes = new byte[3][];
+  private final byte[][] yuvBytes = new byte[3][];
   private int[] rgbBytes = null;
   private int yRowStride;
   private Runnable postInferenceCallback;
@@ -124,6 +120,8 @@ public abstract class CameraActivity extends AppCompatActivity
   public TessOCR tessOCR;
   // Google TTS
   private static TextToSpeech tts;
+  // 파일업로더
+  public static FileUploader fileUpLoader;
 
   private ActionBarDrawerToggle mActionBarDrawerToggle;
   private DrawerLayout mDrawerLayout;
@@ -133,6 +131,7 @@ public abstract class CameraActivity extends AppCompatActivity
 
   public static Boolean isDarkT;
   private SharedPreferences sp;
+
 
   @Override
   protected void onCreate(final Bundle savedInstanceState) {
@@ -144,6 +143,7 @@ public abstract class CameraActivity extends AppCompatActivity
     LOGGER.d("onCreate " + this);
     super.onCreate(null);
     setContentView(R.layout.tfe_od_activity_camera);
+
     mNavigationView = (NavigationView) findViewById(R.id.nav_view);
     mNavigationView.setNavigationItemSelectedListener(this);
 
@@ -164,11 +164,12 @@ public abstract class CameraActivity extends AppCompatActivity
             tessOCR = new TessOCR(getApplicationContext());
             ttsSpeak(tessOCR.processImage(tessOCR.preProcessImg(myBitmap), false) + "번 버스가 도착했습니다!");
           }
-        } else {
-          Log.e("TTS","Initialization Failed");
-        }
-      }
-    });
+          
+    try {
+      fileUpLoader = new FileUploader(getApplicationContext());
+    } catch (FileNotFoundException e) {
+      e.printStackTrace();
+    }
 
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer) ;
@@ -177,6 +178,7 @@ public abstract class CameraActivity extends AppCompatActivity
     Toolbar toolbar = findViewById(R.id.toolbar);
     setSupportActionBar(toolbar);
     ActionBar actionBar = getSupportActionBar();
+
     actionBar.setDisplayHomeAsUpEnabled(true);
     actionBar.setHomeAsUpIndicator(R.drawable.caret);
 
@@ -227,21 +229,13 @@ public abstract class CameraActivity extends AppCompatActivity
     yRowStride = previewWidth;
 
     imageConverter =
-        new Runnable() {
-          @Override
-          public void run() {
-            ImageUtils.convertYUV420SPToARGB8888(bytes, previewWidth, previewHeight, rgbBytes);
-          }
-        };
+            () -> ImageUtils.convertYUV420SPToARGB8888(bytes, previewWidth, previewHeight, rgbBytes);
 
     postInferenceCallback =
-        new Runnable() {
-          @Override
-          public void run() {
-            camera.addCallbackBuffer(bytes);
-            isProcessingFrame = false;
-          }
-        };
+            () -> {
+              camera.addCallbackBuffer(bytes);
+              isProcessingFrame = false;
+            };
     processImage();
   }
 
@@ -275,10 +269,7 @@ public abstract class CameraActivity extends AppCompatActivity
       final int uvPixelStride = planes[1].getPixelStride();
 
       imageConverter =
-          new Runnable() {
-            @Override
-            public void run() {
-              ImageUtils.convertYUV420ToARGB8888(
+              () -> ImageUtils.convertYUV420ToARGB8888(
                   yuvBytes[0],
                   yuvBytes[1],
                   yuvBytes[2],
@@ -288,17 +279,12 @@ public abstract class CameraActivity extends AppCompatActivity
                   uvRowStride,
                   uvPixelStride,
                   rgbBytes);
-            }
-          };
 
       postInferenceCallback =
-          new Runnable() {
-            @Override
-            public void run() {
-              image.close();
-              isProcessingFrame = false;
-            }
-          };
+              () -> {
+                image.close();
+                isProcessingFrame = false;
+              };
 
       processImage();
     } catch (final Exception e) {
@@ -409,7 +395,7 @@ public abstract class CameraActivity extends AppCompatActivity
 
   @Override
   public void onRequestPermissionsResult(
-      final int requestCode, final String[] permissions, final int[] grantResults) {
+          final int requestCode, @NonNull final String[] permissions, @NonNull final int[] grantResults) {
     super.onRequestPermissionsResult(requestCode, permissions, grantResults);
     if (requestCode == PERMISSIONS_REQUEST) {
       if (allPermissionsGranted(grantResults)) {
@@ -504,14 +490,11 @@ public abstract class CameraActivity extends AppCompatActivity
     if (useCamera2API) {
       CameraConnectionFragment camera2Fragment =
           CameraConnectionFragment.newInstance(
-              new CameraConnectionFragment.ConnectionCallback() {
-                @Override
-                public void onPreviewSizeChosen(final Size size, final int rotation) {
-                  previewHeight = size.getHeight();
-                  previewWidth = size.getWidth();
-                  CameraActivity.this.onPreviewSizeChosen(size, rotation);
-                }
-              },
+                  (size, rotation) -> {
+                    previewHeight = size.getHeight();
+                    previewWidth = size.getWidth();
+                    CameraActivity.this.onPreviewSizeChosen(size, rotation);
+                  },
               this,
               getLayoutId(),
               getDesiredPreviewFrameSize());
@@ -567,18 +550,6 @@ public abstract class CameraActivity extends AppCompatActivity
 //    setUseNNAPI(isChecked);
 //    if (isChecked) apiSwitchCompat.setText("NNAPI");
 //    else apiSwitchCompat.setText("TFLITE");
-  }
-
-  protected void showFrameInfo(String frameInfo) {
-//    frameValueTextView.setText(frameInfo);
-  }
-
-  protected void showCropInfo(String cropInfo) {
-//    cropValueTextView.setText(cropInfo);
-  }
-
-  protected void showInference(String inferenceTime) {
-//    inferenceTimeTextView.setText(inferenceTime);
   }
 
   @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)

@@ -27,25 +27,21 @@ import android.graphics.Paint.Style;
 import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.media.ImageReader.OnImageAvailableListener;
-import android.os.Handler;
-import android.os.Message;
-import android.os.SystemClock;
 import android.util.Size;
 import android.util.TypedValue;
-import android.view.View;
 import android.widget.Toast;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import org.tensorflow.lite.examples.detection.customview.OverlayView;
-import org.tensorflow.lite.examples.detection.customview.OverlayView.DrawCallback;
 import org.tensorflow.lite.examples.detection.env.BorderedText;
 import org.tensorflow.lite.examples.detection.env.ImageUtils;
 import org.tensorflow.lite.examples.detection.env.Logger;
 import org.tensorflow.lite.examples.detection.tflite.Detector;
 import org.tensorflow.lite.examples.detection.tflite.TFLiteObjectDetectionAPIModel;
 import org.tensorflow.lite.examples.detection.tracking.MultiBoxTracker;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * An activity that uses a TensorFlowMultiBoxDetector and ObjectTracker to detect and then track
@@ -55,15 +51,14 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
   private static final Logger LOGGER = new Logger();
 
   // Configuration values for the prepackaged SSD model.
-  private static final int TF_OD_API_INPUT_SIZE = 300;
+  private static final int TF_OD_API_INPUT_SIZE = 640;
   private static final boolean TF_OD_API_IS_QUANTIZED = false;
   private static final String TF_OD_API_MODEL_FILE = "final_james.tflite";
   private static final String TF_OD_API_LABELS_FILE = "label.txt";
-  private static final DetectorMode MODE = DetectorMode.TF_OD_API;
   // Minimum detection confidence to track a detection.
   private static final float MINIMUM_CONFIDENCE_TF_OD_API = 0.5f;
   private static final boolean MAINTAIN_ASPECT = false;
-  private static final Size DESIRED_PREVIEW_SIZE = new Size(640, 480);
+  private static final Size DESIRED_PREVIEW_SIZE = new Size(1920, 1080);
   private static final boolean SAVE_PREVIEW_BITMAP = false;
   private static final float TEXT_SIZE_DIP = 10;
   OverlayView trackingOverlay;
@@ -71,7 +66,6 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
   private Detector detector;
 
-  private long lastProcessingTimeMs;
   private Bitmap rgbFrameBitmap = null;
   private Bitmap croppedBitmap = null;
   private Bitmap cropCopyBitmap = null;
@@ -142,15 +136,12 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
       cropToFrameTransform = new Matrix();
       frameToCropTransform.invert(cropToFrameTransform);
 
-      trackingOverlay = (OverlayView) findViewById(R.id.tracking_overlay);
+      trackingOverlay = findViewById(R.id.tracking_overlay);
       trackingOverlay.addCallback(
-              new DrawCallback() {
-                @Override
-                public void drawCallback(final Canvas canvas) {
-                  tracker.draw(canvas);
-                  if (isDebug()) {
-                    tracker.drawDebug(canvas);
-                  }
+              canvas -> {
+                tracker.draw(canvas);
+                if (isDebug()) {
+                  tracker.drawDebug(canvas);
                 }
               });
 
@@ -183,105 +174,65 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
       }
 
       runInBackground(
-              new Runnable() {
-                @Override
-                public void run() {
-                  LOGGER.i("Running detection on image " + currTimestamp);
-                  final long startTime = SystemClock.uptimeMillis();
-                  final List<Detector.Recognition> results = detector.recognizeImage(croppedBitmap);
-                  lastProcessingTimeMs = SystemClock.uptimeMillis() - startTime;
+              () -> {
+                LOGGER.i("Running detection on image " + currTimestamp);
+                final List<Detector.Recognition> results = detector.recognizeImage(croppedBitmap);
 
-                  cropCopyBitmap = Bitmap.createBitmap(croppedBitmap);
-                  final Canvas canvas = new Canvas(cropCopyBitmap);
-                  final Paint paint = new Paint();
-                  paint.setColor(Color.RED);
-                  paint.setStyle(Style.STROKE);
-                  paint.setStrokeWidth(2.0f);
+                cropCopyBitmap = Bitmap.createBitmap(croppedBitmap);
+                final Canvas canvas1 = new Canvas(cropCopyBitmap);
+                final Paint paint = new Paint();
+                paint.setColor(Color.RED);
+                paint.setStyle(Style.STROKE);
+                paint.setStrokeWidth(2.0f);
 
-                  float minimumConfidence = MINIMUM_CONFIDENCE_TF_OD_API;
-                  switch (MODE) {
-                    case TF_OD_API:
-                      minimumConfidence = MINIMUM_CONFIDENCE_TF_OD_API;
-                      break;
-                  }
+                final List<Detector.Recognition> mappedRecognitions =
+                        new ArrayList<>();
 
+                for (final Detector.Recognition result : results) {
+                  final RectF location = result.getLocation();
+                  if (location != null && result.getConfidence() >= MINIMUM_CONFIDENCE_TF_OD_API) {
+                    canvas1.drawRect(location, paint);
 
-                  final List<Detector.Recognition> mappedRecognitions =
-                          new ArrayList<Detector.Recognition>();
+                    cropToFrameTransform.mapRect(location);
 
-                  for (final Detector.Recognition result : results) {
-                    final RectF location = result.getLocation();
-                    if (location != null && result.getConfidence() >= minimumConfidence) {
-                      canvas.drawRect(location, paint);
+                    result.setLocation(location);
+                    mappedRecognitions.add(result);
 
-                      cropToFrameTransform.mapRect(location);
+                    if (result.getTitle().equals("bus")) {
+                      busLeft = result.getLocation().left;
+                      busTop = result.getLocation().top;
+                      busRight = result.getLocation().right;
+                      busBottom = result.getLocation().bottom;
+                    }
 
-                      result.setLocation(location);
-                      mappedRecognitions.add(result);
-
-
-
-
-//                버스 인식 데이터 업데이트 - 버스 사진 모아서 버스 잘 읽게 학습. 테스트할 때 버스 없는 물체 많은 사진 넣어보기.
-
-//                버스 바운더리 안에 버스번호 있는지 확인 후 있으면 크롭 - 코드
-
-//                버스 번호 읽어주는 방식 (반복 제거) - 1. 버튼 확인식 2. 반복 제거식? 3. 기타
-
-
-//                디자인
-
-                      if (result.getTitle().equals("bus")) {
-                        busLeft = result.getLocation().left;
-                        busTop = result.getLocation().top;
-                        busRight = result.getLocation().right;
-                        busBottom = result.getLocation().bottom;
-                      }
-
-                      if (isTime && result.getTitle().equals("busnumber")) {
-                        Toast.makeText(getApplicationContext(), "Dectected BusNumber! Try to crop image...", Toast.LENGTH_LONG).show();
-                        try {
-                          cropImage(result.getLocation());
-                        } catch (IOException e) {
-                          e.printStackTrace();
-                        }
-                        setTime();
-                      }
+                    if (isTime && result.getTitle().equals("busnumber")) {
+                      Toast.makeText(getApplicationContext(), "Dectected BusNumber! Try to crop image...", Toast.LENGTH_LONG).show();
+                      cropImage(result.getLocation());
+                      setTime();
                     }
                   }
-
-                  tracker.trackResults(mappedRecognitions, currTimestamp);
-                  trackingOverlay.postInvalidate();
-
-                  computingDetection = false;
-
-                  runOnUiThread(
-                          new Runnable() {
-                            @Override
-                            public void run() {
-//                              showFrameInfo(previewWidth + "x" + previewHeight);
-//                              showCropInfo(cropCopyBitmap.getWidth() + "x" + cropCopyBitmap.getHeight());
-//                              showInference(lastProcessingTimeMs + "ms");
-
-//                              if (!mappedRecognitions.isEmpty())
-//                                for (Detector.Recognition mappedRecognition : mappedRecognitions) {
-//                                  recognitionText.setText(recognitionText.getText() + mappedRecognition.getTitle() + "\n");
-//                                }
-                            }
-                          });
                 }
+
+                tracker.trackResults(mappedRecognitions, currTimestamp);
+                trackingOverlay.postInvalidate();
+
+                computingDetection = false;
+
+                runOnUiThread(
+                        () -> {
+                        });
               });
     }
 
-    private void cropImage(RectF location) throws IOException {
+    private void cropImage(RectF location) {
 
       float cropX = 0.0f;
       float cropY = 0.0f;
 
 //  버스 번호만 Crop
 
-      if (location.left > 0) cropX = location.left;
-      if (location.top > 0) cropY = location.top;
+      if (location.left > 20) cropX = location.left - 20;
+      if (location.top > 20) cropY = location.top - 20;
 
       if (busLeft <= location.left && busTop <= location.top
           && busRight >= location.right && busBottom >= location.bottom){
@@ -292,15 +243,14 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
         Bitmap newBitmap = Bitmap.createBitmap(rgbFrameBitmap,
                 (int) cropX,
                 (int) cropY,
-                (int) location.width(),
-                (int) location.height(),
+                (int) location.width() + 20,
+                (int) location.height() + 20,
                 rotateMatrix,
                 MAINTAIN_ASPECT);
 
-        CameraActivity.ttsSpeak(tessOCR.processImage(tessOCR.preProcessImg(newBitmap), true));
+        CameraActivity.ttsSpeak(tessOCR.processImage(tessOCR.preProcessImg(newBitmap)));
 
-        FileUploader fileUploader = new FileUploader(getApplicationContext());
-        fileUploader.UpdateFile(newBitmap, "capture");
+        CameraActivity.fileUpLoader.UpdateFile(newBitmap, "capture");
       }
     }
 
@@ -313,10 +263,4 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
     protected Size getDesiredPreviewFrameSize() {
       return DESIRED_PREVIEW_SIZE;
     }
-
-    // Which detection model to use: by default uses Tensorflow Object Detection API frozen
-    // checkpoints.
-    private enum DetectorMode {
-      TF_OD_API;
-    }
-  }
+}
