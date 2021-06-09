@@ -17,11 +17,8 @@
 package org.tensorflow.lite.examples.detection;
 
 import android.Manifest;
-import android.app.Activity;
 import android.app.Fragment;
 import android.content.Context;
-import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -39,19 +36,9 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Trace;
-
-import androidx.annotation.RequiresApi;
-import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.app.ActionBarDrawerToggle;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.SwitchCompat;
-import androidx.appcompat.widget.Toolbar;
-
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.util.Size;
-import android.view.Gravity;
-
 import android.view.MenuItem;
 import android.view.Surface;
 import android.view.View;
@@ -59,27 +46,18 @@ import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.CompoundButton;
-
-import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.ListView;
-import android.widget.TextView;
-
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-
-import androidx.core.view.GravityCompat;
-import androidx.drawerlayout.widget.DrawerLayout;
-
-import com.google.android.material.bottomsheet.BottomSheetBehavior;
-import com.google.android.material.navigation.NavigationView;
-import com.googlecode.tesseract.android.TessBaseAPI;
-
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
+
+import com.google.android.material.navigation.NavigationView;
 
 import org.tensorflow.lite.examples.detection.env.ImageUtils;
 import org.tensorflow.lite.examples.detection.env.Logger;
@@ -93,7 +71,7 @@ import java.util.TimerTask;
 public abstract class CameraActivity extends AppCompatActivity
     implements OnImageAvailableListener,
         Camera.PreviewCallback,
-        CompoundButton.OnCheckedChangeListener, NavigationView.OnNavigationItemSelectedListener,
+        CompoundButton.OnCheckedChangeListener,
         View.OnClickListener {
   private static final Logger LOGGER = new Logger();
 
@@ -123,64 +101,74 @@ public abstract class CameraActivity extends AppCompatActivity
   // 파일업로더
   public static FileUploader fileUpLoader;
 
-  private ActionBarDrawerToggle mActionBarDrawerToggle;
-  private DrawerLayout mDrawerLayout;
-//  public TextView recognitionText;
-  MenuItem menuItem;
-  NavigationView mNavigationView;
-
-  public static Boolean isDarkT;
-  private SharedPreferences sp;
-
 
   @Override
   protected void onCreate(final Bundle savedInstanceState) {
-    sp = getSharedPreferences("sp", Activity.MODE_PRIVATE);
-    isDarkT = sp.getBoolean("isDark", true);
-    LOGGER.e("깜깜쓰 ? "+isDarkT);
-    setTheme (isDarkT? R.style.AppTheme_BBeono : R.style.AppTheme_WBeono);
-
     LOGGER.d("onCreate " + this);
     super.onCreate(null);
     setContentView(R.layout.tfe_od_activity_camera);
 
-    mNavigationView = (NavigationView) findViewById(R.id.nav_view);
-    mNavigationView.setNavigationItemSelectedListener(this);
-
-    tts = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
-      @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-      @Override
-      public void onInit(int status) {
-        if (status == TextToSpeech.SUCCESS) {
-        int result = tts.setLanguage(Locale.KOREA);
-          if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED){
-            Log.e("TTS","This Language is not supported");
-          } else {
-            isTime = true;
-
-            // TEST OCR + TTS
-            Bitmap myBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.unnamed5);
-
-            tessOCR = new TessOCR(getApplicationContext());
-            ttsSpeak(tessOCR.processImage(tessOCR.preProcessImg(myBitmap), false) + "번 버스가 도착했습니다!");
-          }
-          
     try {
       fileUpLoader = new FileUploader(getApplicationContext());
     } catch (FileNotFoundException e) {
       e.printStackTrace();
     }
 
+    tts = new TextToSpeech(this, status -> {
+      if (status == TextToSpeech.SUCCESS) {
+      int result = tts.setLanguage(Locale.KOREA);
+        if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED){
+          Log.e("TTS","This Language is not supported");
+        } else {
+          isTime = true;
+
+          // TEST OCR + TTS
+          Bitmap myBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.unnamed5);
+
+          tessOCR = new TessOCR(getApplicationContext());
+          ttsSpeak(tessOCR.processImage(tessOCR.preProcessImg(myBitmap)));
+        }
+      } else {
+        Log.e("TTS","Initialization Failed");
+      }
+    });
+
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-    mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer) ;
 
     //툴바
     Toolbar toolbar = findViewById(R.id.toolbar);
     setSupportActionBar(toolbar);
     ActionBar actionBar = getSupportActionBar();
+    actionBar.setDisplayShowCustomEnabled(true);
 
-    actionBar.setDisplayHomeAsUpEnabled(true);
-    actionBar.setHomeAsUpIndicator(R.drawable.caret);
+    //툴바의 열기버튼
+    DrawerLayout drawer = findViewById(R.id.drawer);
+    Button buttonOpen = findViewById(R.id.open);
+    buttonOpen.setOnClickListener(v -> {
+      if (!drawer.isDrawerOpen(GravityCompat.START)) {
+        drawer.openDrawer(GravityCompat.START) ;
+      }
+      else drawer.closeDrawer(GravityCompat.START);
+    });
+
+    NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
+    navigationView.setNavigationItemSelectedListener(item -> {
+      item.setChecked(true);
+      drawer.closeDrawers();
+
+      int id = item.getItemId();
+      String title = item.getTitle().toString();
+
+      // TODO: 2021-06-07 - 폰트사이즈 변경 및 배경색 변경
+      if (id == R.id.nav_fontSize){
+        Toast.makeText(getApplicationContext(),"폰트 사이즈 변경", Toast.LENGTH_LONG).show();
+      }
+      else if (id == R.id.nav_changeBG){
+        Toast.makeText(getApplicationContext(),"배경색 변경", Toast.LENGTH_LONG).show();
+      }
+
+      return true;
+    });
 
     if (hasPermission()) {
       setFragment();
@@ -294,42 +282,6 @@ public abstract class CameraActivity extends AppCompatActivity
     }
     Trace.endSection();
   }
-  //홈버튼 햄버거
-  @Override
-  public boolean onOptionsItemSelected(MenuItem item) {
-    int id = item.getItemId();
-    mDrawerLayout = findViewById(R.id.drawer);
-
-    if (id == android.R.id.home) {
-      if (!mDrawerLayout.isDrawerOpen(Gravity.LEFT)) {
-        mDrawerLayout.openDrawer(Gravity.LEFT);
-      } else mDrawerLayout.closeDrawer(Gravity.LEFT);
-    }
-    return super.onOptionsItemSelected(item);
-  }
-
-  //서랍 메뉴 선택할 때 메소드
-  @Override
-  public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
-    int selectedItemId = menuItem.getItemId();
-    LOGGER.e("훔...???");
-    if (selectedItemId == R.id.nav_fontSize) {
-      Intent intent = new Intent(CameraActivity.this, settings_fontSize.class);
-      Toast.makeText(this, "폰트 사이즈~", Toast.LENGTH_SHORT).show();
-      startActivity(intent);
-    } else if (selectedItemId == R.id.nav_changeBG) {
-      Intent intent2 = new Intent(CameraActivity.this, settings_changeBG.class);
-      Toast.makeText(this, "배경색 바꾸기~", Toast.LENGTH_SHORT).show();
-      startActivity(intent2);
-    }
-//    else if (selectedItemId == android.R.id.home) {
-//      finish();
-//    }
-      //드로어 닫기
-      mDrawerLayout = findViewById(R.id.drawer);
-      mDrawerLayout.closeDrawer(GravityCompat.START);
-      return true;
-  }
 
   @Override
   public synchronized void onStart() {
@@ -364,14 +316,9 @@ public abstract class CameraActivity extends AppCompatActivity
 
     super.onPause();
   }
-  
+
   @Override
   public synchronized void onStop() {
-
-      SharedPreferences.Editor editor = sp.edit();
-      editor.putBoolean("isDark", isDarkT); // key, value를 이용하여 저장하는 형태
-      editor.commit();
-
     LOGGER.d("onStop " + this);
     super.onStop();
   }
