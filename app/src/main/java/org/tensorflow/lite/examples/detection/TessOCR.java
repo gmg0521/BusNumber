@@ -30,6 +30,7 @@ public class TessOCR {
     private final TessBaseAPI tess;
     private final Context ctx;
     Bitmap imgBase;
+    static StringBuffer chkLog = new StringBuffer();
 
     public TessOCR(Context ctx) {
         // 데이터 경로
@@ -163,10 +164,12 @@ public class TessOCR {
 
         tess.setImage(bitmap);
         OCRresult = tess.getUTF8Text();
-        String resultText = OCRresult.replaceAll("[^0-9]", "");
+        String resultText = OCRresult.replaceAll("[^0-9]", "") + "번 버스가 도착했습니다!";
         Log.e("test",resultText);
 
-        return resultText + "번 버스가 도착했습니다!";
+        chkLog.append(resultText).append("\n");
+
+        return resultText;
 
     }
 

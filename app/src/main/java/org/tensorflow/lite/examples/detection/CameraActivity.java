@@ -39,47 +39,30 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Trace;
-
-import androidx.annotation.RequiresApi;
-import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.app.ActionBarDrawerToggle;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.SwitchCompat;
-import androidx.appcompat.widget.Toolbar;
-
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.util.Size;
 import android.view.Gravity;
-
 import android.view.MenuItem;
 import android.view.Surface;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.AdapterView;
-import android.widget.Button;
 import android.widget.CompoundButton;
-
-import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.ListView;
-import android.widget.TextView;
-
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-
+import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.ActionBarDrawerToggle;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 
-import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.navigation.NavigationView;
-import com.googlecode.tesseract.android.TessBaseAPI;
-
-import androidx.annotation.RequiresApi;
-import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
+import com.lakue.lakuepopupactivity.PopupActivity;
+import com.lakue.lakuepopupactivity.PopupGravity;
+import com.lakue.lakuepopupactivity.PopupType;
 
 import org.tensorflow.lite.examples.detection.env.ImageUtils;
 import org.tensorflow.lite.examples.detection.env.Logger;
@@ -125,7 +108,7 @@ public abstract class CameraActivity extends AppCompatActivity
 
   private ActionBarDrawerToggle mActionBarDrawerToggle;
   private DrawerLayout mDrawerLayout;
-//  public TextView recognitionText;
+
   MenuItem menuItem;
   NavigationView mNavigationView;
 
@@ -133,6 +116,7 @@ public abstract class CameraActivity extends AppCompatActivity
   private SharedPreferences sp;
 
 
+  @RequiresApi(api = Build.VERSION_CODES.M)
   @Override
   protected void onCreate(final Bundle savedInstanceState) {
     sp = getSharedPreferences("sp", Activity.MODE_PRIVATE);
@@ -147,47 +131,47 @@ public abstract class CameraActivity extends AppCompatActivity
     mNavigationView = (NavigationView) findViewById(R.id.nav_view);
     mNavigationView.setNavigationItemSelectedListener(this);
 
-    tts = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
-      @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-      @Override
-      public void onInit(int status) {
-        if (status == TextToSpeech.SUCCESS) {
+    tts = new TextToSpeech(this, status -> {
+      if (status == TextToSpeech.SUCCESS) {
         int result = tts.setLanguage(Locale.KOREA);
-          if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED){
-            Log.e("TTS","This Language is not supported");
-          } else {
-            isTime = true;
+        if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+          Log.e("TTS", "This Language is not supported");
+        } else {
+          isTime = true;
 
-            // TEST OCR + TTS
-            Bitmap myBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.unnamed5);
+          // TEST OCR + TTS
+          Bitmap myBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.unnamed5);
 
-            tessOCR = new TessOCR(getApplicationContext());
-            ttsSpeak(tessOCR.processImage(tessOCR.preProcessImg(myBitmap), false) + "번 버스가 도착했습니다!");
-          }
-          
-    try {
-      fileUpLoader = new FileUploader(getApplicationContext());
-    } catch (FileNotFoundException e) {
-      e.printStackTrace();
-    }
+          tessOCR = new TessOCR(getApplicationContext());
+          ttsSpeak(tessOCR.processImage(tessOCR.preProcessImg(myBitmap)));
+        }
+      }
+    });
 
-    getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-    mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer) ;
 
-    //툴바
-    Toolbar toolbar = findViewById(R.id.toolbar);
-    setSupportActionBar(toolbar);
-    ActionBar actionBar = getSupportActionBar();
+        try {
+          fileUpLoader = new FileUploader(getApplicationContext());
+        } catch (FileNotFoundException e) {
+          e.printStackTrace();
+        }
 
-    actionBar.setDisplayHomeAsUpEnabled(true);
-    actionBar.setHomeAsUpIndicator(R.drawable.caret);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer);
 
-    if (hasPermission()) {
-      setFragment();
-    } else {
-      requestPermission();
-    }
-  }
+        //툴바
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        ActionBar actionBar = getSupportActionBar();
+
+        actionBar.setDisplayHomeAsUpEnabled(true);
+        actionBar.setHomeAsUpIndicator(R.drawable.caret);
+
+        if (hasPermission()) {
+          setFragment();
+        } else {
+          requestPermission();
+        }
+      }
 
   protected int[] getRgbBytes() {
     imageConverter.run();
@@ -321,6 +305,14 @@ public abstract class CameraActivity extends AppCompatActivity
       Intent intent2 = new Intent(CameraActivity.this, settings_changeBG.class);
       Toast.makeText(this, "배경색 바꾸기~", Toast.LENGTH_SHORT).show();
       startActivity(intent2);
+    } else if (selectedItemId == R.id.nav_chkLog) {
+      Intent intent = new Intent(getBaseContext(), PopupActivity.class);
+      intent.putExtra("type", PopupType.NORMAL);
+      intent.putExtra("gravity", PopupGravity.CENTER);
+      intent.putExtra("title", "공지사항");
+      intent.putExtra("content", TessOCR.chkLog.toString());
+      intent.putExtra("buttonCenter", "종료");
+      startActivityForResult(intent, 1);
     }
 //    else if (selectedItemId == android.R.id.home) {
 //      finish();
@@ -364,7 +356,7 @@ public abstract class CameraActivity extends AppCompatActivity
 
     super.onPause();
   }
-  
+
   @Override
   public synchronized void onStop() {
 
@@ -393,6 +385,7 @@ public abstract class CameraActivity extends AppCompatActivity
     }
   }
 
+  @RequiresApi(api = Build.VERSION_CODES.M)
   @Override
   public void onRequestPermissionsResult(
           final int requestCode, @NonNull final String[] permissions, @NonNull final int[] grantResults) {
@@ -447,6 +440,7 @@ public abstract class CameraActivity extends AppCompatActivity
     return requiredLevel <= deviceLevel;
   }
 
+  @RequiresApi(api = Build.VERSION_CODES.M)
   private String chooseCamera() {
     final CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
     try {
@@ -483,6 +477,7 @@ public abstract class CameraActivity extends AppCompatActivity
     return null;
   }
 
+  @RequiresApi(api = Build.VERSION_CODES.M)
   protected void setFragment() {
     String cameraId = chooseCamera();
 

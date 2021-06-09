@@ -17,6 +17,10 @@
             android:icon="@mipmap/ic_launcher"
             android:title="배경색 변경하기"
             app:titleTextColor="?attr/titleTextColor"/>
+        <item
+            android:id="@+id/nav_chkLog"
+            android:icon="@drawable/ic_launcher"
+            android:title="로그 확인하기" />
 
     </group>
 </menu>
