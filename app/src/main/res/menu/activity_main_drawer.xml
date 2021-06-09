@@ -1,17 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     tools:showIn="navigation_view">
 
-    <group android:checkableBehavior="single">
+    <group android:checkableBehavior="none">
         <item
             android:id="@+id/nav_fontSize"
-            android:icon="@android:drawable/ic_menu_edit"
-            android:title="폰트 크기 조절하기" />
+
+            android:icon="@mipmap/ic_launcher"
+            android:title="폰트 크기 조절하기"
+            app:titleTextColor="?attr/titleTextColor"/>
 
         <item
             android:id="@+id/nav_changeBG"
-            android:icon="@android:drawable/ic_menu_gallery"
-            android:title="배경색 변경하기" />
+            android:icon="@mipmap/ic_launcher"
+            android:title="배경색 변경하기"
+            app:titleTextColor="?attr/titleTextColor"/>
+
     </group>
 </menu>

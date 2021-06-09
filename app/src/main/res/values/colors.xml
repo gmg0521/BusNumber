@@ -5,4 +5,10 @@
     <color name="tfe_color_accent">#425066</color>
 
     <color name="tfe_semi_transparent">#66000000</color>
+
+
+    <color name="black">#000000</color>
+    <color name="white">#ffffff</color>
+    <color name="highlight">#ffc800</color>
+    <color name="highlight2">#00fbff</color>
 </resources>

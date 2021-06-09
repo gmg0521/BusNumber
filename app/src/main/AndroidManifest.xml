@@ -11,12 +11,13 @@
     <uses-feature android:name="android.hardware.camera.autofocus" />
 
     <application
+        android:theme="@style/AppTheme.BBeono"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/tfe_od_app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true"
-        android:theme="@style/AppTheme.ObjectDetection">
+
+        android:supportsRtl="true">
 
         <activity
             android:name=".DetectorActivity"
@@ -27,6 +28,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".settings_changeBG" />
+        <activity
+            android:name=".settings_fontSize" />
 
     </application>
 </manifest>

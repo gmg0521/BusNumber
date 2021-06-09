@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorPrimary">
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:layout_alignParentTop="true"
+        android:visibility="visible"
+        tools:ignore="MissingConstraints"
+        app:titleTextColor="?attr/titleTextColor">
+    </androidx.appcompat.widget.Toolbar>
+
+    <LinearLayout
+        android:layout_marginTop="?attr/actionBarSize"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+        <Button
+            android:id="@+id/setBlack"
+            android:text="검정색으로!"
+            android:layout_width="match_parent"
+            android:layout_height="300px"
+            android:background="?attr/colorSecondary"
+            android:textColor="?attr/subtitleTextColor"/>
+        <Button
+            android:id="@+id/setWhite"
+            android:text="흰색으로!"
+            android:layout_width="match_parent"
+            android:layout_height="300px"
+            android:background="?attr/colorSecondary"
+            android:textColor="?attr/subtitleTextColor"
+            android:layout_marginTop="500px" />
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
