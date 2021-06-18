@@ -28,10 +28,5 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity
-            android:name=".settings_changeBG" />
-        <activity
-            android:name=".settings_fontSize" />
-
     </application>
 </manifest>

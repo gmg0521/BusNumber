@@ -17,4 +17,26 @@
         <item name="android:windowBackground">@color/white</item>
         <item name="colorAccent">@color/highlight2</item>
     </style>
+
+    <style name="AppTheme.BBeono2" parent="Theme.AppCompat.NoActionBar">
+        <item name="colorPrimary">@color/black</item>
+        <item name="colorSecondary">@color/white</item>
+        <item name="titleTextColor">@color/white</item>
+        <item name="subtitleTextColor">@color/black</item>
+        <item name="android:navigationBarColor">@color/tfe_semi_transparent</item>
+        <item name="colorAccent">@color/highlight</item>
+        <item name="android:windowBackground">@color/black</item>
+        <item name="android:textSize">45dp</item>
+        <item name="listPreferredItemHeight">200dp</item>
+    </style>
+    <style name="AppTheme.WBeono2" parent="Theme.AppCompat.NoActionBar">
+        <item name="colorPrimary">@color/white</item>
+        <item name="colorSecondary">@color/black</item>
+        <item name="titleTextColor">@color/black</item>
+        <item name="subtitleTextColor">@color/white</item>
+        <item name="android:windowBackground">@color/white</item>
+        <item name="colorAccent">@color/highlight2</item>
+        <item name="android:textSize">45dp</item>
+        <item name="listPreferredItemHeight">200dp</item>
+    </style>
 </resources>

@@ -127,8 +127,8 @@ public abstract class CameraActivity extends AppCompatActivity
     isDarkT = sp.getBoolean("isDark", true);
     isBiggerT = sp.getBoolean("isBigger", false);
     LOGGER.e("깜깜쓰 ? "+isDarkT+"      큰 글씨?"+isBiggerT);
-    //setTheme 첫번째가 큰글씨
-    setTheme (isDarkT == isBiggerT ? (isDarkT ? R.style.AppTheme_BBeono : R.style.AppTheme_WBeono) : (!isDarkT ? R.style.AppTheme_BBeono : R.style.AppTheme_WBeono));
+
+    setTheme (isDarkT == isBiggerT ? (isDarkT ? R.style.AppTheme_BBeono2 : R.style.AppTheme_WBeono) : (isDarkT ? R.style.AppTheme_BBeono : R.style.AppTheme_WBeono2));
 
     LOGGER.d("onCreate " + this);
     super.onCreate(null);

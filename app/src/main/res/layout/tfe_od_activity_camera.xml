@@ -38,6 +38,7 @@
                 app:headerLayout="@layout/nav_header_main"
                 app:menu="@menu/activity_main_drawer"
                 android:background="?attr/colorPrimary"
+                    app:itemMaxLines="3"
                 app:itemTextColor="?attr/titleTextColor"/>
 
                </androidx.drawerlayout.widget.DrawerLayout>
