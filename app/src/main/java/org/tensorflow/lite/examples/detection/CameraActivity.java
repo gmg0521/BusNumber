@@ -43,11 +43,14 @@ import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.util.Size;
 import android.view.Gravity;
+import android.view.Menu;
 import android.view.MenuItem;
 import android.view.Surface;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.CompoundButton;
+import android.widget.Switch;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -74,10 +77,9 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 public abstract class CameraActivity extends AppCompatActivity
-    implements OnImageAvailableListener,
+        implements OnImageAvailableListener,
         Camera.PreviewCallback,
-        CompoundButton.OnCheckedChangeListener, NavigationView.OnNavigationItemSelectedListener,
-        View.OnClickListener {
+        CompoundButton.OnCheckedChangeListener, NavigationView.OnNavigationItemSelectedListener {
   private static final Logger LOGGER = new Logger();
 
   private static final int PERMISSIONS_REQUEST = 1;
@@ -109,27 +111,58 @@ public abstract class CameraActivity extends AppCompatActivity
   private ActionBarDrawerToggle mActionBarDrawerToggle;
   private DrawerLayout mDrawerLayout;
 
-  MenuItem menuItem;
+  Menu menu;
+//  MenuItem menuItem;
   NavigationView mNavigationView;
 
   public static Boolean isDarkT;
+  public static Boolean isBiggerT;
   private SharedPreferences sp;
 
 
   @RequiresApi(api = Build.VERSION_CODES.M)
   @Override
-  protected void onCreate(final Bundle savedInstanceState) {
+  protected void onCreate(Bundle savedInstanceState) {
     sp = getSharedPreferences("sp", Activity.MODE_PRIVATE);
     isDarkT = sp.getBoolean("isDark", true);
-    LOGGER.e("깜깜쓰 ? "+isDarkT);
-    setTheme (isDarkT? R.style.AppTheme_BBeono : R.style.AppTheme_WBeono);
+    isBiggerT = sp.getBoolean("isBigger", false);
+    LOGGER.e("깜깜쓰 ? "+isDarkT+"      큰 글씨?"+isBiggerT);
+    //setTheme 첫번째가 큰글씨
+    setTheme (isDarkT == isBiggerT ? (isDarkT ? R.style.AppTheme_BBeono : R.style.AppTheme_WBeono) : (!isDarkT ? R.style.AppTheme_BBeono : R.style.AppTheme_WBeono));
 
     LOGGER.d("onCreate " + this);
     super.onCreate(null);
-    setContentView(R.layout.tfe_od_activity_camera);
 
+    setContentView(R.layout.tfe_od_activity_camera);
     mNavigationView = (NavigationView) findViewById(R.id.nav_view);
+    menu = mNavigationView.getMenu();
+    //스위치(on-off) 추가
+    mNavigationView.getMenu().findItem(R.id.nav_changeBG)
+            .setActionView(new Switch(this));
+
+    mNavigationView.getMenu().findItem(R.id.nav_fontSize)
+            .setActionView(new Switch(this));
+    ((Switch) mNavigationView.getMenu().findItem(R.id.nav_changeBG).getActionView()).setChecked(isDarkT);
+    ((Switch) mNavigationView.getMenu().findItem(R.id.nav_fontSize).getActionView()).setChecked(isBiggerT);
+
     mNavigationView.setNavigationItemSelectedListener(this);
+    //switch listener 등록
+    ((Switch) mNavigationView.getMenu().findItem(R.id.nav_changeBG).getActionView()).setOnCheckedChangeListener(
+            new CompoundButton.OnCheckedChangeListener() {
+              @Override
+              public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                LOGGER.e("배경색이 검정색인가유 ..."+isChecked);
+                isDarkT = isChecked;
+              }
+            });
+    ((Switch) mNavigationView.getMenu().findItem(R.id.nav_fontSize).getActionView()).setOnCheckedChangeListener(
+            new CompoundButton.OnCheckedChangeListener() {
+              @Override
+              public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                LOGGER.e("큰글씨 인가 ..."+isChecked);
+                isBiggerT = isChecked;
+              }
+            });
 
     tts = new TextToSpeech(this, status -> {
       if (status == TextToSpeech.SUCCESS) {
@@ -149,29 +182,29 @@ public abstract class CameraActivity extends AppCompatActivity
     });
 
 
-        try {
-          fileUpLoader = new FileUploader(getApplicationContext());
-        } catch (FileNotFoundException e) {
-          e.printStackTrace();
-        }
+    try {
+      fileUpLoader = new FileUploader(getApplicationContext());
+    } catch (FileNotFoundException e) {
+      e.printStackTrace();
+    }
 
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer);
+    getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+    mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer);
 
-        //툴바
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-        ActionBar actionBar = getSupportActionBar();
+    //툴바
+    Toolbar toolbar = findViewById(R.id.toolbar);
+    setSupportActionBar(toolbar);
+    ActionBar actionBar = getSupportActionBar();
 
-        actionBar.setDisplayHomeAsUpEnabled(true);
-        actionBar.setHomeAsUpIndicator(R.drawable.caret);
+    actionBar.setDisplayHomeAsUpEnabled(true);
+    actionBar.setHomeAsUpIndicator(R.drawable.caret);
 
-        if (hasPermission()) {
-          setFragment();
-        } else {
-          requestPermission();
-        }
-      }
+    if (hasPermission()) {
+      setFragment();
+    } else {
+      requestPermission();
+    }
+  }
 
   protected int[] getRgbBytes() {
     imageConverter.run();
@@ -254,15 +287,15 @@ public abstract class CameraActivity extends AppCompatActivity
 
       imageConverter =
               () -> ImageUtils.convertYUV420ToARGB8888(
-                  yuvBytes[0],
-                  yuvBytes[1],
-                  yuvBytes[2],
-                  previewWidth,
-                  previewHeight,
-                  yRowStride,
-                  uvRowStride,
-                  uvPixelStride,
-                  rgbBytes);
+                      yuvBytes[0],
+                      yuvBytes[1],
+                      yuvBytes[2],
+                      previewWidth,
+                      previewHeight,
+                      yRowStride,
+                      uvRowStride,
+                      uvPixelStride,
+                      rgbBytes);
 
       postInferenceCallback =
               () -> {
@@ -278,6 +311,7 @@ public abstract class CameraActivity extends AppCompatActivity
     }
     Trace.endSection();
   }
+
   //홈버튼 햄버거
   @Override
   public boolean onOptionsItemSelected(MenuItem item) {
@@ -296,16 +330,14 @@ public abstract class CameraActivity extends AppCompatActivity
   @Override
   public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
     int selectedItemId = menuItem.getItemId();
-    LOGGER.e("훔...???");
-    if (selectedItemId == R.id.nav_fontSize) {
-      Intent intent = new Intent(CameraActivity.this, settings_fontSize.class);
-      Toast.makeText(this, "폰트 사이즈~", Toast.LENGTH_SHORT).show();
-      startActivity(intent);
-    } else if (selectedItemId == R.id.nav_changeBG) {
-      Intent intent2 = new Intent(CameraActivity.this, settings_changeBG.class);
-      Toast.makeText(this, "배경색 바꾸기~", Toast.LENGTH_SHORT).show();
-      startActivity(intent2);
-    } else if (selectedItemId == R.id.nav_chkLog) {
+    LOGGER.e("뭔가 선택해따 ");
+
+    if (selectedItemId == R.id.nav_fontSize || selectedItemId == R.id.nav_changeBG) {
+      ((Switch) menuItem.getActionView()).toggle();
+      Toast.makeText(CameraActivity.this, "변경된 테마는 앱 재시작 후에 적용됩니다아아", Toast.LENGTH_SHORT).show();
+      return false;
+    }
+    else if (selectedItemId == R.id.nav_chkLog) {
       Intent intent = new Intent(getBaseContext(), PopupActivity.class);
       intent.putExtra("type", PopupType.NORMAL);
       intent.putExtra("gravity", PopupGravity.CENTER);
@@ -317,10 +349,11 @@ public abstract class CameraActivity extends AppCompatActivity
 //    else if (selectedItemId == android.R.id.home) {
 //      finish();
 //    }
-      //드로어 닫기
-      mDrawerLayout = findViewById(R.id.drawer);
-      mDrawerLayout.closeDrawer(GravityCompat.START);
-      return true;
+
+    //드로어 닫기
+    mDrawerLayout = findViewById(R.id.drawer);
+    mDrawerLayout.closeDrawer(GravityCompat.START);
+    return true;
   }
 
   @Override
@@ -328,9 +361,7 @@ public abstract class CameraActivity extends AppCompatActivity
     LOGGER.d("onStart " + this);
     super.onStart();
   }
-  @Override
-  public void onClick(View v) {
-  }
+
   @Override
   public synchronized void onResume() {
     LOGGER.d("onResume " + this);
@@ -360,9 +391,11 @@ public abstract class CameraActivity extends AppCompatActivity
   @Override
   public synchronized void onStop() {
 
-      SharedPreferences.Editor editor = sp.edit();
-      editor.putBoolean("isDark", isDarkT); // key, value를 이용하여 저장하는 형태
-      editor.commit();
+    //여기예욧...!!**
+    SharedPreferences.Editor editor = sp.edit();
+    editor.putBoolean("isDark", isDarkT);
+    editor.putBoolean("isBigger", isBiggerT);
+    editor.commit();
 
     LOGGER.d("onStop " + this);
     super.onStop();
@@ -423,7 +456,7 @@ public abstract class CameraActivity extends AppCompatActivity
                 CameraActivity.this,
                 "Camera permission is required for this demo",
                 Toast.LENGTH_LONG)
-            .show();
+                .show();
       }
       requestPermissions(new String[] {PERMISSION_CAMERA}, PERMISSIONS_REQUEST);
     }
@@ -431,7 +464,7 @@ public abstract class CameraActivity extends AppCompatActivity
 
   // Returns true if the device supports the required hardware level, or better.
   private boolean isHardwareLevelSupported(
-      CameraCharacteristics characteristics, int requiredLevel) {
+          CameraCharacteristics characteristics, int requiredLevel) {
     int deviceLevel = characteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL);
     if (deviceLevel == CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY) {
       return requiredLevel == deviceLevel;
@@ -454,7 +487,7 @@ public abstract class CameraActivity extends AppCompatActivity
         }
 
         final StreamConfigurationMap map =
-            characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+                characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
 
         if (map == null) {
           continue;
@@ -464,9 +497,9 @@ public abstract class CameraActivity extends AppCompatActivity
         // This should help with legacy situations where using the camera2 API causes
         // distorted or otherwise broken previews.
         useCamera2API =
-            (facing == CameraCharacteristics.LENS_FACING_EXTERNAL)
-                || isHardwareLevelSupported(
-                    characteristics, CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL);
+                (facing == CameraCharacteristics.LENS_FACING_EXTERNAL)
+                        || isHardwareLevelSupported(
+                        characteristics, CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL);
         LOGGER.i("Camera API lv2?: %s", useCamera2API);
         return cameraId;
       }
@@ -484,21 +517,21 @@ public abstract class CameraActivity extends AppCompatActivity
     Fragment fragment;
     if (useCamera2API) {
       CameraConnectionFragment camera2Fragment =
-          CameraConnectionFragment.newInstance(
-                  (size, rotation) -> {
-                    previewHeight = size.getHeight();
-                    previewWidth = size.getWidth();
-                    CameraActivity.this.onPreviewSizeChosen(size, rotation);
-                  },
-              this,
-              getLayoutId(),
-              getDesiredPreviewFrameSize());
+              CameraConnectionFragment.newInstance(
+                      (size, rotation) -> {
+                        previewHeight = size.getHeight();
+                        previewWidth = size.getWidth();
+                        CameraActivity.this.onPreviewSizeChosen(size, rotation);
+                      },
+                      this,
+                      getLayoutId(),
+                      getDesiredPreviewFrameSize());
 
       camera2Fragment.setCamera(cameraId);
       fragment = camera2Fragment;
     } else {
       fragment =
-          new LegacyCameraConnectionFragment(this, getLayoutId(), getDesiredPreviewFrameSize());
+              new LegacyCameraConnectionFragment(this, getLayoutId(), getDesiredPreviewFrameSize());
     }
 
     getFragmentManager().beginTransaction().replace(R.id.container, fragment).commit();

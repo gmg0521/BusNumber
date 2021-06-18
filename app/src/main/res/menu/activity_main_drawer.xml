@@ -7,15 +7,13 @@
     <group android:checkableBehavior="none">
         <item
             android:id="@+id/nav_fontSize"
-
             android:icon="@mipmap/ic_launcher"
-            android:title="폰트 크기 조절하기"
+            android:title="큰글씨모드"
             app:titleTextColor="?attr/titleTextColor"/>
-
         <item
             android:id="@+id/nav_changeBG"
             android:icon="@mipmap/ic_launcher"
-            android:title="배경색 변경하기"
+            android:title="다크모드"
             app:titleTextColor="?attr/titleTextColor"/>
         <item
             android:id="@+id/nav_chkLog"
