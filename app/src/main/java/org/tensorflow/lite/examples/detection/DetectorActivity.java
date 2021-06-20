@@ -16,7 +16,6 @@
 
 package org.tensorflow.lite.examples.detection;
 
-import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.Config;
 import android.graphics.Canvas;
@@ -207,6 +206,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
                     if (isTime && result.getTitle().equals("busnumber")) {
                       Toast.makeText(getApplicationContext(), "Dectected BusNumber! Try to crop image...", Toast.LENGTH_LONG).show();
+                      ttsSpeak("버스 번호를 인식했습니다. 잠시만 기다려주세요!");
                       cropImage(result.getLocation());
                       setTime();
                     }

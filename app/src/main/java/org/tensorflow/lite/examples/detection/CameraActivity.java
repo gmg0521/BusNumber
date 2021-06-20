@@ -46,11 +46,9 @@ import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.Surface;
-import android.view.View;
 import android.view.WindowManager;
 import android.widget.CompoundButton;
 import android.widget.Switch;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -85,6 +83,8 @@ public abstract class CameraActivity extends AppCompatActivity
   private static final int PERMISSIONS_REQUEST = 1;
 
   private static final String PERMISSION_CAMERA = Manifest.permission.CAMERA;
+  private static final String PERMISSION_FILE_WRITE= Manifest.permission.WRITE_EXTERNAL_STORAGE;
+  private static final String PERMISSION_FILE_READ= Manifest.permission.READ_EXTERNAL_STORAGE;
   public static boolean isTime;
   private static TimerTask mTask;
   private static Timer mTimer;
@@ -173,7 +173,7 @@ public abstract class CameraActivity extends AppCompatActivity
           isTime = true;
 
           // TEST OCR + TTS
-          Bitmap myBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.unnamed5);
+          Bitmap myBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.bong);
 
           tessOCR = new TessOCR(getApplicationContext());
           ttsSpeak(tessOCR.processImage(tessOCR.preProcessImg(myBitmap)));
@@ -458,7 +458,7 @@ public abstract class CameraActivity extends AppCompatActivity
                 Toast.LENGTH_LONG)
                 .show();
       }
-      requestPermissions(new String[] {PERMISSION_CAMERA}, PERMISSIONS_REQUEST);
+      requestPermissions(new String[] {PERMISSION_CAMERA, PERMISSION_FILE_READ,PERMISSION_FILE_WRITE}, PERMISSIONS_REQUEST);
     }
   }
 
@@ -582,10 +582,13 @@ public abstract class CameraActivity extends AppCompatActivity
 
   @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
   public static void ttsSpeak(String text){
-    if(isTime) {
-      tts.setPitch(1.0f);
-      tts.setSpeechRate(1.0f);
-      tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "id1");
+    tts.setPitch(1.0f);
+    tts.setSpeechRate(1.0f);
+    if(text.isEmpty()){
+      text = "인식에 실패하였습니다. 다시 시도해주세요.";
+      tts.speak(text, TextToSpeech.QUEUE_ADD, null, "id1");
+    } else {
+      tts.speak(text, TextToSpeech.QUEUE_ADD, null, "id1");
     }
   }
 
