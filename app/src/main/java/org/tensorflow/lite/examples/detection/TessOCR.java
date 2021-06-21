@@ -37,7 +37,7 @@ public class TessOCR {
     private final Context ctx;
     Bitmap imgBase;
     static StringBuffer chkLog = new StringBuffer();
-    List possibleContours;
+    List<HashMap> possibleContours;
 
     public TessOCR(Context ctx) {
         // 데이터 경로
@@ -136,7 +136,7 @@ public class TessOCR {
             MatOfPoint matOfPoint = contours.get(idx);
             Rect rect = Imgproc.boundingRect(matOfPoint);
 
-            Map contours_map = new HashMap<String, Integer>();
+            HashMap contours_map = new HashMap<String, Integer>();
 
             contours_map.put("contour", matOfPoint);
             contours_map.put("x", rect.x);
@@ -161,7 +161,7 @@ public class TessOCR {
                 possibleContours.add(contours_map);
             }
 
-            Imgproc.rectangle(copyImgcny, rect, new Scalar(255,255,255));
+                Imgproc.rectangle(copyImgcny, rect, new Scalar(255,255,255));
         }
 
         Utils.matToBitmap(copyImgcny, contoursRoi);
@@ -216,16 +216,16 @@ public class TessOCR {
         final float NUM_HEIGHT_PADDING = 1.2f;
 
 
-        for (int i = 0; i < matched_result.size(); i++) {
-            Collections.sort(matched_result.get(i), new Comparator<HashMap>() {
+        for (int i = 0; i < possibleContours.size(); i++) {
+            Collections.sort(possibleContours, new Comparator<HashMap>() {
                 @Override
                 public int compare(HashMap o1, HashMap o2) {
                     return Double.valueOf(o1.get("cx").toString()).compareTo(Double.parseDouble(o2.get("cx").toString()));
                 }
             });
 
-            HashMap sortedStart = matched_result.get(i).get(0);
-            HashMap sortedEnd = matched_result.get(i).get(matched_result.get(i).size()-1);
+            HashMap sortedStart = possibleContours.get(0);
+            HashMap sortedEnd = possibleContours.get(possibleContours.size()-1);
 
 
             float num_cx = (Float.parseFloat(sortedStart.get("cx").toString()) + Float.parseFloat(sortedEnd.get("cx").toString())) / 2;
@@ -243,15 +243,15 @@ public class TessOCR {
 //                sum_height += Float.parseFloat(matched_result.get(i).get(j).get("h").toString());
 //            }
 
-            Collections.sort(matched_result.get(i), new Comparator<HashMap>() {
+            Collections.sort(possibleContours, new Comparator<HashMap>() {
                 @Override
                 public int compare(HashMap o1, HashMap o2) {
                     return Double.valueOf(o1.get("cy").toString()).compareTo(Double.parseDouble(o2.get("cy").toString()));
                 }
             });
 
-            HashMap sortedStartY = matched_result.get(i).get(0);
-            HashMap sortedEndY = matched_result.get(i).get(matched_result.get(i).size()-1);
+            HashMap sortedStartY = possibleContours.get(0);
+            HashMap sortedEndY = possibleContours.get(possibleContours.size()-1);
 
             int y1 = Integer.parseInt(sortedStartY.get("y").toString());
             int y2 = Integer.parseInt(sortedEndY.get("y").toString());
