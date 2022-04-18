@@ -205,7 +205,6 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                     }
 
                     if (isTime && result.getTitle().equals("busnumber")) {
-                      Toast.makeText(getApplicationContext(), "Dectected BusNumber! Try to crop image...", Toast.LENGTH_LONG).show();
                       ttsSpeak("버스 번호를 인식했습니다. 잠시만 기다려주세요!");
                       cropImage(result.getLocation());
                       setTime();
@@ -243,8 +242,8 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
         Bitmap newBitmap = Bitmap.createBitmap(rgbFrameBitmap,
                 (int) cropX,
                 (int) cropY,
-                (int) location.width() + 20,
-                (int) location.height() + 20,
+                (int) location.width(),
+                (int) location.height(),
                 rotateMatrix,
                 MAINTAIN_ASPECT);
 

@@ -341,7 +341,7 @@ public abstract class CameraActivity extends AppCompatActivity
       Intent intent = new Intent(getBaseContext(), PopupActivity.class);
       intent.putExtra("type", PopupType.NORMAL);
       intent.putExtra("gravity", PopupGravity.CENTER);
-      intent.putExtra("title", "공지사항");
+      intent.putExtra("title", "로그");
       intent.putExtra("content", TessOCR.chkLog.toString());
       intent.putExtra("buttonCenter", "종료");
       startActivityForResult(intent, 1);
@@ -584,12 +584,12 @@ public abstract class CameraActivity extends AppCompatActivity
   public static void ttsSpeak(String text){
     tts.setPitch(1.0f);
     tts.setSpeechRate(1.0f);
-    if(text.isEmpty()){
-      text = "인식에 실패하였습니다. 다시 시도해주세요.";
+//    if(text.isEmpty()){
+//      text = "인식에 실패하였습니다. 다시 시도해주세요.";
+//      tts.speak(text, TextToSpeech.QUEUE_ADD, null, "id1");
+//    } else {
       tts.speak(text, TextToSpeech.QUEUE_ADD, null, "id1");
-    } else {
-      tts.speak(text, TextToSpeech.QUEUE_ADD, null, "id1");
-    }
+//    }
   }
 
   public static void setTime() {

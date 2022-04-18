@@ -217,12 +217,7 @@ public class TessOCR {
 
 
         for (int i = 0; i < possibleContours.size(); i++) {
-            Collections.sort(possibleContours, new Comparator<HashMap>() {
-                @Override
-                public int compare(HashMap o1, HashMap o2) {
-                    return Double.valueOf(o1.get("cx").toString()).compareTo(Double.parseDouble(o2.get("cx").toString()));
-                }
-            });
+            Collections.sort(possibleContours, (o1, o2) -> Double.valueOf(o1.get("cx").toString()).compareTo(Double.parseDouble(o2.get("cx").toString())));
 
             HashMap sortedStart = possibleContours.get(0);
             HashMap sortedEnd = possibleContours.get(possibleContours.size()-1);
