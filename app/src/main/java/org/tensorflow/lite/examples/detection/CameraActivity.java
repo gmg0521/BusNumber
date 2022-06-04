@@ -584,12 +584,10 @@ public abstract class CameraActivity extends AppCompatActivity
   public static void ttsSpeak(String text){
     tts.setPitch(1.0f);
     tts.setSpeechRate(1.0f);
-//    if(text.isEmpty()){
-//      text = "인식에 실패하였습니다. 다시 시도해주세요.";
-//      tts.speak(text, TextToSpeech.QUEUE_ADD, null, "id1");
-//    } else {
+    if(text.isEmpty()){
+      text = "인식에 실패하였습니다. 다시 시도해주세요.";
+     }
       tts.speak(text, TextToSpeech.QUEUE_ADD, null, "id1");
-//    }
   }
 
   public static void setTime() {

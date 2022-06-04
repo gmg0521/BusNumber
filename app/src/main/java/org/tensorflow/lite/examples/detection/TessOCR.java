@@ -23,7 +23,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.sql.Array;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -87,6 +89,8 @@ public class TessOCR {
         Mat imgGaussianBlur = new Mat();
         Mat imageCny1 = new Mat();
 
+        //1. 색조 처리 및 노이즈 제거
+
         Imgproc.cvtColor(img1, imageGray1, Imgproc.COLOR_BGR2GRAY);
         Imgproc.GaussianBlur(imageGray1, imgGaussianBlur, new org.opencv.core.Size(3,3), 0);
         Imgproc.Canny(imgGaussianBlur, imageCny1, 10, 100,3,true);
@@ -95,11 +99,10 @@ public class TessOCR {
         List<MatOfPoint> contours = new ArrayList<>();
         Mat hierarchy = new Mat();
 
-        //노이즈 제거
         Imgproc.erode(imageCny1, imageCny1, Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(6, 6)));
         Imgproc.dilate(imageCny1, imageCny1, Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(12, 12)));
 
-        //관심영역 추출
+        //2. 1차 관심영역 추출
         Imgproc.findContours(imageCny1, contours, hierarchy, Imgproc.RETR_TREE, Imgproc.CHAIN_APPROX_SIMPLE);
         Imgproc.drawContours(img1, contours, -1, new Scalar(0,255,0,0), 5);
 
@@ -145,7 +148,7 @@ public class TessOCR {
             contours_map.put("h", rect.height);
             contours_map.put("cx", (Integer) rect.x - (rect.width / 2));
             contours_map.put("cy", (Integer) rect.y - (rect.height / 2));
-//
+
             contoursList.add((HashMap) contours_map);
 
             float area =  (Integer) contours_map.get("w") * (Integer) contours_map.get("h");
@@ -233,11 +236,6 @@ public class TessOCR {
 
             int num_width = Math.round(width * NUM_WIDTH_PADDING);
 
-//            float sum_height = 0;
-//            for (int j = 0; j < matched_result.get(i).size(); j++) {
-//                sum_height += Float.parseFloat(matched_result.get(i).get(j).get("h").toString());
-//            }
-
             Collections.sort(possibleContours, new Comparator<HashMap>() {
                 @Override
                 public int compare(HashMap o1, HashMap o2) {
@@ -254,43 +252,6 @@ public class TessOCR {
             int height = (y2+Integer.parseInt(sortedEndY.get("h").toString())) - y1;
 
             int num_height = Math.round(height * NUM_HEIGHT_PADDING);
-
-//            double triangle_height = Double.parseDouble(String.valueOf(sortedEnd.get("cy"))) - Double.parseDouble(String.valueOf(sortedStart.get("cy")));
-
-//            List<Double> temp = new ArrayList();
-//            temp.add(Double.parseDouble(String.valueOf(sortedStart.get("cx"))) - Double.parseDouble(String.valueOf(sortedEnd.get("cx"))));
-//            temp.add(Double.parseDouble(String.valueOf(sortedStart.get("cy"))) - Double.parseDouble(String.valueOf(sortedEnd.get("cy"))));
-
-//            double triangle_hypotenus = Math.sqrt(Math.pow(temp.get(0),2) + Math.pow(temp.get(1), 2));
-//
-//            double angle = Math.toDegrees(Math.asin(triangle_height / triangle_hypotenus));
-//
-//            Mat rotation_matrix = Imgproc.getRotationMatrix2D(new Point(num_cx, num_cy), angle, 1.0);
-//
-//            Mat img_rotated = new Mat();
-//
-//            Imgproc.warpAffine(imageCny1, img_rotated, rotation_matrix, new Size(imageCny1.width(), imageCny1.height()));
-//
-//            Mat img_cropped = new Mat();
-//            Imgproc.getRectSubPix(img_rotated, new Size(Math.round(num_width), Math.round(num_height)), new Point(Math.round(num_cx), Math.round(num_cy)), img_cropped);
-//
-//            float ratio = Float.valueOf(String.valueOf(img_cropped.width())) / Float.valueOf(String.valueOf(img_cropped.height()));
-//
-////            if (ratio < MIN_NUM_RAITO || (ratio < MIN_NUM_RAITO || MIN_NUM_RAITO > MAX_NUM_RATIO))
-////                continue;
-//
-//            num_imgs.add(img_cropped);
-//
-//            float x = num_cx - num_width / 2;
-//            float y = num_cy - num_height / 2;
-//
-//            HashMap info = new HashMap();
-//            info.put("x", Math.round(x));
-//            info.put("y", Math.round(y));
-//            info.put("w", num_width);
-//            info.put("h", num_height);
-//
-//            num_infos.add(info);
 
             int subX = Integer.parseInt(String.valueOf(sortedStart.get("x")));
             int subY = Integer.parseInt(String.valueOf(sortedStart.get("y")));
